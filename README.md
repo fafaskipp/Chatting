@@ -32,3 +32,6 @@ Semua data ada di folder **`data/`** (`db.json` + `uploads/` untuk foto/video). 
 Port, lokasi data, dan jumlah slot bisa diganti: `PORT=8080 DATA_DIR=D:\kaigo-data SLOTS=12 node server.js`.
 
 > Catatan: data pasien yang dihapus akan hilang permanen 30 hari kemudian. Kalau masih ingin menyimpan catatannya, kembalikan dulu pasiennya (↩️ 元に戻す), lalu cetak atau simpan ke Excel.
+
+## Versi demo (iPad / tanpa server)
+`node demo/build.js` membuat `demo/kaigo-demo.html`: satu file yang berjalan langsung di browser tanpa server, berisi contoh data. Data hanya tersimpan di browser perangkat itu. Cetak, Excel, dan berbagi antar-perangkat tidak tersedia di versi demo.

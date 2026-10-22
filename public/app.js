@@ -98,6 +98,15 @@ function patientName(id) {
   return p ? p.name : '';
 }
 
+// 確認の画面（大きいボタンで「はい／いいえ」を選ぶ）
+function askConfirm(message) {
+  const dlg = $('#confirm-dialog');
+  $('#confirm-text').textContent = message;
+  dlg.returnValue = '';
+  dlg.showModal();
+  return new Promise((resolve) => dlg.addEventListener('close', () => resolve(dlg.returnValue === 'yes'), { once: true }));
+}
+
 // ---------- 記録の表示 ----------
 
 function mediaHtml(media, removable) {
@@ -655,15 +664,15 @@ document.addEventListener('click', async (e) => {
   if ((b = t('[data-edit]'))) {
     try { openNoteForm(await api('notes/' + b.dataset.edit)); } catch (err) { toast(err.message); }
   } else if ((b = t('[data-del]'))) {
-    if (confirm('この記録をゴミ箱に移しますか？\n（ゴミ箱から元に戻せます）')) run(() => api('notes/' + b.dataset.del, { method: 'DELETE' }), 'ゴミ箱に移しました');
+    if (await askConfirm('この記録をゴミ箱に移しますか？\n（ゴミ箱から元に戻せます）')) run(() => api('notes/' + b.dataset.del, { method: 'DELETE' }), 'ゴミ箱に移しました');
   } else if ((b = t('[data-nrestore]'))) {
     run(() => api(`notes/${b.dataset.nrestore}/restore`, { method: 'POST' }), '元に戻しました ✅');
   } else if ((b = t('[data-npurge]'))) {
-    if (confirm('この記録を完全に消しますか？\n二度と元に戻せません。')) run(() => api(`notes/${b.dataset.npurge}/purge`, { method: 'DELETE' }), '完全に消しました');
+    if (await askConfirm('この記録を完全に消しますか？\n二度と元に戻せません。')) run(() => api(`notes/${b.dataset.npurge}/purge`, { method: 'DELETE' }), '完全に消しました');
   } else if ((b = t('[data-prestore]'))) {
     run(() => api(`patients/${b.dataset.prestore}/restore`, { method: 'POST' }), '元に戻しました ✅');
   } else if ((b = t('[data-ppurge]'))) {
-    if (confirm('この方の情報と記録をすべて完全に消しますか？\n二度と元に戻せません。')) {
+    if (await askConfirm('この方の情報と記録をすべて完全に消しますか？\n二度と元に戻せません。')) {
       run(() => api(`patients/${b.dataset.ppurge}/purge`, { method: 'DELETE' }), '完全に消しました');
     }
   } else if ((b = t('[data-tview]'))) {
@@ -708,7 +717,7 @@ $('#note-form').addEventListener('click', (e) => {
 });
 
 // 利用者の管理
-$('#slot-list').addEventListener('click', (e) => {
+$('#slot-list').addEventListener('click', async (e) => {
   const add = e.target.closest('[data-padd]');
   const edit = e.target.closest('[data-pedit]');
   const del = e.target.closest('[data-pdel]');
@@ -716,7 +725,7 @@ $('#slot-list').addEventListener('click', (e) => {
   else if (edit) openPatientForm(state.patients.find((x) => x.id === edit.dataset.pedit));
   else if (del) {
     const p = state.patients.find((x) => x.id === del.dataset.pdel);
-    if (!confirm(`${p.name} 様を削除しますか？\n\n・この枠は「空き」になり、新しい方を登録できます\n・記録はゴミ箱に移り、あとから元に戻せます`)) return;
+    if (!(await askConfirm(`${p.name} 様を削除しますか？\n\n・この枠は「空き」になり、新しい方を登録できます\n・記録はゴミ箱に移り、あとから元に戻せます`))) return;
     api('patients/' + p.id, { method: 'DELETE' })
       .then(() => {
         if (state.selectedPatient === p.id) state.selectedPatient = null;

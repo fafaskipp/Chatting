@@ -281,6 +281,9 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 dialog h2 { margin: 0; }
 
 .viewer { background: #111; text-align: center; }
+.confirm { width: min(480px, calc(100vw - 16px)); }
+.confirm-text { white-space: pre-wrap; font-size: 1.15rem; font-weight: bold; margin: 0; }
+.confirm .actions .btn { flex: 1; }
 .viewer img, .viewer video { max-width: 100%; max-height: calc(100vh - 140px); display: block; margin: 0 auto 12px; }
 
 .toast {

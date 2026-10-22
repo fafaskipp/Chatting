@@ -161,6 +161,17 @@
     <button class="btn btn-gray" id="viewer-close">✕ 閉じる</button>
   </dialog>
 
+  <!-- 確認 -->
+  <dialog id="confirm-dialog" class="confirm">
+    <form method="dialog" class="form">
+      <p id="confirm-text" class="confirm-text"></p>
+      <div class="actions">
+        <button value="yes" class="btn btn-del">はい</button>
+        <button value="no" class="btn btn-gray">いいえ</button>
+      </div>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast" hidden></div>
 
   <script src="app.js"></script>
