@@ -3,14 +3,17 @@
 Aplikasi web catatan harian untuk pekerjaan kaigo. Berjalan **offline** di satu komputer (server) dan bisa dibuka dari komputer/tablet/HP lain di jaringan Wi-Fi/LAN yang sama. Tampilan berbahasa Jepang.
 
 ## Fitur
-- **📅 日付で見る** — catatan per tanggal, yang terbaru paling atas. Filter: 今日 / 昨日 / 1週間 / 1か月 / すべて, pilih tanggal, cari kata, ⭐ 重要だけ.
+- **📅 日付で見る** — catatan per tanggal, yang terbaru paling atas. Tombol cepat 今日 / 昨日 / 1週間 / 1か月 / すべて dan ⭐ 重要だけ. Pilih tanggal, jenis, dan cari kata ada di「🔍 詳しく探す」.
+- Daftar catatan tampil 50 per halaman, lanjutkan dengan「⬇ もっと見る」.
 - **👤 利用者で見る** — tekan tombol nama (atau ketik nama/ふりがな) → hanya catatan pasien itu yang tampil, plus memo pasien.
 - **⚙️ 利用者の管理** — 10 枠 (slot) pasien. Tombol ✏️ 編集 untuk mengubah data, 🗑 削除 saat pasien keluar/meninggal: slot menjadi （空き） dan bisa langsung diisi pasien pengganti dengan「＋ ここに登録する」. Catatan pasien lama tidak tercampur dengan pasien baru.
-- **🗑 ゴミ箱** — catatan atau pasien yang dihapus masuk ke sini (pasien beserta semua catatannya). Bisa dilihat (📖 記録を見る), dikembalikan (↩️ 元に戻す), atau dihapus permanen (完全に消す / ゴミ箱を空にする).
-- Catatan berisi teks, **foto dan video** (maks. 500MB per file), jenis catatan **bebas** (ketik sendiri atau pilih tombol: 食事・服薬・事故・ケガ dll.), penulis, tanda ⭐ 重要.
+- **📊 年間まとめ** — rekap per tahun (semua pasien atau satu pasien): jumlah catatan per bulan, per jenis, per pasien, dan daftar catatan ⭐ 重要. Bisa dicetak.
+- **🗑 ゴミ箱** — catatan atau pasien yang dihapus masuk ke sini (pasien beserta semua catatannya). Bisa dilihat (📖 記録を見る), dikembalikan (↩️ 元に戻す), atau dihapus permanen (完全に消す). Isi ゴミ箱 **terhapus otomatis setelah 30 hari**.
+- Catatan berisi teks, **foto** (otomatis diperkecil agar ringan) dan video pendek (maks. 100MB), jenis catatan **bebas** (ketik sendiri atau pilih tombol: 食事・服薬・事故・ケガ dll.), penulis, tanda ⭐ 重要.
 - **🖨 印刷・PDF** — mencetak daftar yang sedang tampil (pilih「PDFに保存」di jendela cetak untuk membuat PDF).
 - **📊 Excelで保存** — menyimpan daftar yang sedang tampil sebagai file CSV yang bisa dibuka langsung di Excel.
-- Otomatis menampilkan catatan baru dari komputer lain (setiap 10 detik).
+- Otomatis menampilkan catatan baru dari komputer lain (setiap 10 detik). Beberapa orang bisa menyimpan catatan bersamaan tanpa ada yang hilang.
+- Tampilan HP: menu tab pindah ke bawah layar seperti aplikasi HP.
 - Backup otomatis harian di `data/backups/` (30 hari terakhir).
 
 ## Cara memakai
@@ -28,4 +31,4 @@ Semua data ada di folder **`data/`** (`db.json` + `uploads/` untuk foto/video). 
 
 Port, lokasi data, dan jumlah slot bisa diganti: `PORT=8080 DATA_DIR=D:\kaigo-data SLOTS=12 node server.js`.
 
-> Catatan: di Jepang catatan kaigo biasanya wajib disimpan beberapa tahun (umumnya 2–5 tahun). Sebaiknya jangan langsung 「完全に消す」 data pasien yang sudah keluar/meninggal — biarkan di ゴミ箱 atau cetak/ekspor dulu.
+> Catatan: data pasien yang dihapus akan hilang permanen 30 hari kemudian. Kalau masih ingin menyimpan catatannya, kembalikan dulu pasiennya (↩️ 元に戻す), lalu cetak atau simpan ke Excel.

@@ -42,7 +42,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   padding: 12px 16px 0;
   max-width: 1000px;
@@ -59,6 +59,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
   cursor: pointer;
 }
 .tab.active { background: var(--blue); color: #fff; }
+.tab .lb-s { display: none; }
+.tab .ic { margin-right: 4px; }
 
 main { max-width: 1000px; margin: 0 auto; padding: 16px; }
 
@@ -92,6 +94,29 @@ main { max-width: 1000px; margin: 0 auto; padding: 16px; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-bottom: 12px; }
 .hint { background: #fff8e1; border-left: 8px solid #f9a825; border-radius: 6px; padding: 10px 14px; margin-top: 0; }
 .print-only { display: none; }
+.muted { color: var(--muted); display: block; }
+
+details { margin-top: 10px; }
+details summary {
+  display: inline-flex; align-items: center; min-height: 46px; padding: 6px 16px;
+  border: 2px solid var(--line); border-radius: 999px; font-weight: bold; cursor: pointer; list-style: none;
+}
+details summary::-webkit-details-marker { display: none; }
+details[open] summary { background: #eceff1; margin-bottom: 10px; }
+
+.more-btn { width: 100%; background: #fff; color: var(--blue); border: 2px solid var(--blue); }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+.stat .num { font-size: 1.8rem; word-break: keep-all; overflow-wrap: anywhere; font-weight: bold; line-height: 1.2; }
+.stat .lab { color: var(--muted); font-weight: bold; }
+.bars { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 16px; }
+.bar-row { display: grid; grid-template-columns: 7.5em 1fr 3.5em; gap: 10px; align-items: center; min-height: 34px; }
+.bar-row .bl { font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-row .bt { display: block; background: #eceff1; border-radius: 6px; height: 20px; overflow: hidden; }
+.bar-row .bf { display: block; height: 100%; border-radius: 6px; background: var(--blue); }
+.bar-row .bn { text-align: right; font-weight: bold; }
+.bars h3 { margin: 0 0 8px; }
 
 .slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 .slot {
@@ -263,19 +288,39 @@ dialog h2 { margin: 0; }
   background: #222; color: #fff; padding: 12px 22px; border-radius: 999px; font-weight: bold; z-index: 100;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 760px) {
   :root { font-size: 17px; }
   .topbar h1 { font-size: 1.2rem; }
   .btn-new { padding: 8px 14px; font-size: 1.05rem; }
-  .tabs { grid-template-columns: repeat(2, 1fr); }
-  .tab { font-size: .95rem; padding: 12px 4px; border-radius: var(--radius); }
+  /* スマホ：タブは画面の下に固定 */
+  body { padding-bottom: 76px; }
+  .tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0; padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+    gap: 2px; background: #fff; border-top: 2px solid var(--line); max-width: none;
+  }
+  .tab { border: none; border-radius: 10px; padding: 4px 0; font-size: .8rem; display: flex; flex-direction: column; align-items: center; line-height: 1.2; min-height: 60px; justify-content: center; }
+  .tab .ic { font-size: 1.4rem; margin: 0; }
+  .tab .lb { display: none; }
+  .tab .lb-s { display: block; }
+  main { padding: 12px; }
+  .filters, .card { padding: 10px; }
+  .quick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .chip-btn { padding: 4px 0; font-size: .95rem; }
+  .stat .num { font-size: 1.4rem; }
+  .toolbar .btn { flex: 1; padding: 8px 10px; font-size: 1rem; }
+  .note-foot .actions .btn { padding: 6px 12px; }
+  .patient-grid, .choice-grid { grid-template-columns: repeat(2, 1fr); }
+  .slot-grid { grid-template-columns: 1fr; }
+  dialog { padding: 14px; }
+  .bar-row { grid-template-columns: 5.5em 1fr 3em; }
   .media-item { width: 96px; height: 96px; }
 }
 
 @media print {
   :root { font-size: 12pt; }
-  body { background: #fff; }
-  .topbar, .tabs, .filters, .toolbar, .hint, .note-foot .actions, #patient-buttons, dialog, .toast { display: none !important; }
+  body { background: #fff; padding-bottom: 0; }
+  .bar-row .bf { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .topbar, .tabs, .filters, .toolbar, .hint, .more-btn, .note-foot .actions, #patient-buttons, dialog, .toast { display: none !important; }
   .print-only { display: block; }
   #patient-head h2 { display: none; }
   main { max-width: none; padding: 0; }

@@ -14,7 +14,8 @@ const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, 'data');
 const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const BACKUP_DIR = path.join(DATA_DIR, 'backups');
-const MAX_UPLOAD_BYTES = 500 * 1024 * 1024; // 500MB（動画用）
+const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // 100MB（短い動画まで）
+const TRASH_DAYS = 30; // ゴミ箱はこの日数で自動的に完全削除
 const MAX_JSON_BYTES = 1024 * 1024;
 const SLOT_COUNT = Number(process.env.SLOTS) || 10; // 利用者の枠の数
 
@@ -68,10 +69,18 @@ function slotOwner(slot) {
 let db = loadDb();
 
 // 書き込みは一時ファイル→リネームで、途中で電源が切れても壊れにくくする
+// 同時に何人が保存しても、Node は1件ずつ順番に処理するので記録は失われない
 function saveDb() {
   const tmp = DB_FILE + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(db, null, 2));
-  fs.renameSync(tmp, DB_FILE);
+  const data = JSON.stringify(db);
+  fs.writeFileSync(tmp, data);
+  try {
+    fs.renameSync(tmp, DB_FILE);
+  } catch {
+    // Windows でウイルス対策ソフトがファイルを開いているときなど
+    fs.writeFileSync(DB_FILE, data);
+    fs.rmSync(tmp, { force: true });
+  }
 }
 
 // 1日1回、起動時と書き込み時に自動バックアップ（直近30日分を保持）
@@ -271,15 +280,63 @@ function exportCsv(res, notes) {
   res.end(body);
 }
 
+// 年間まとめ：月ごと・種類ごと・利用者ごとの件数と、重要な記録の一覧
+function yearSummary(q) {
+  const live = db.notes.filter((n) => !n.deletedAt);
+  const years = [...new Set(live.map((n) => n.date.slice(0, 4)))].sort().reverse();
+  const year = /^\d{4}$/.test(q.get('year') || '') ? q.get('year') : String(new Date().getFullYear());
+  const patientId = q.get('patientId') || '';
+  const notes = live.filter(
+    (n) => n.date.startsWith(year) && (!patientId || (patientId === 'none' ? !n.patientId : n.patientId === patientId))
+  );
+  const months = Array(12).fill(0);
+  const categories = new Map();
+  const patients = new Map();
+  for (const n of notes) {
+    months[Number(n.date.slice(5, 7)) - 1]++;
+    categories.set(n.category, (categories.get(n.category) || 0) + 1);
+    const key = n.patientId || 'none';
+    patients.set(key, (patients.get(key) || 0) + 1);
+  }
+  const names = new Map(db.patients.map((p) => [p.id, p.name]));
+  return {
+    year,
+    years: years.includes(year) ? years : [year, ...years].sort().reverse(),
+    total: notes.length,
+    months,
+    categories: [...categories].sort((a, b) => b[1] - a[1]),
+    patients: [...patients]
+      .map(([id, count]) => ({ id, name: id === 'none' ? '全体・共有' : names.get(id) || '', count }))
+      .sort((a, b) => b.count - a.count),
+    important: sortNotes(notes.filter((n) => n.important)),
+  };
+}
+
+function purgeExpiredTrash() {
+  const limit = new Date(Date.now() - TRASH_DAYS * 86400000).toISOString();
+  const t = trashList();
+  const oldPatients = t.patients.filter((p) => p.deletedAt < limit);
+  const oldNotes = t.notes.filter((n) => n.deletedAt < limit);
+  if (!oldPatients.length && !oldNotes.length) return;
+  for (const p of oldPatients) purgePatient(p);
+  purgeNotes(oldNotes);
+  commit();
+}
+
 function trashList() {
   const patients = db.patients
     .filter((p) => p.deletedAt)
-    .map((p) => ({ ...p, noteCount: db.notes.filter((n) => n.deletedWithPatient === p.id).length }))
+    .map((p) => ({ ...p, noteCount: db.notes.filter((n) => n.deletedWithPatient === p.id).length, expiresAt: expiry(p.deletedAt) }))
     .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
   const notes = db.notes
     .filter((n) => n.deletedAt && !n.deletedWithPatient)
+    .map((n) => ({ ...n, expiresAt: expiry(n.deletedAt) }))
     .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
   return { patients, notes };
+}
+
+function expiry(deletedAt) {
+  return new Date(new Date(deletedAt).getTime() + TRASH_DAYS * 86400000).toISOString();
 }
 
 function purgeNotes(notes) {
@@ -302,7 +359,7 @@ async function handleApi(req, res, url) {
   const now = () => new Date().toISOString();
 
   if (resource === 'info' && method === 'GET') {
-    return sendJson(res, 200, { addresses: lanAddresses(), port: PORT, slots: SLOT_COUNT });
+    return sendJson(res, 200, { addresses: lanAddresses(), port: PORT, slots: SLOT_COUNT, trashDays: TRASH_DAYS });
   }
 
   if (resource === 'version' && method === 'GET') {
@@ -371,12 +428,22 @@ async function handleApi(req, res, url) {
     }
   }
 
+  if (resource === 'summary' && method === 'GET') {
+    return sendJson(res, 200, yearSummary(url.searchParams));
+  }
+
   if (resource === 'export.csv' && method === 'GET') {
     return exportCsv(res, filterNotes(url.searchParams));
   }
 
   if (resource === 'notes') {
-    if (method === 'GET' && !id) return sendJson(res, 200, filterNotes(url.searchParams));
+    if (method === 'GET' && !id) {
+      const all = filterNotes(url.searchParams);
+      const limit = Number(url.searchParams.get('limit'));
+      if (!limit) return sendJson(res, 200, all);
+      const offset = Number(url.searchParams.get('offset')) || 0;
+      return sendJson(res, 200, { notes: all.slice(offset, offset + limit), total: all.length });
+    }
     if (method === 'POST' && !id) {
       const n = { id: newId(), ...cleanNote(await readJson(req)), createdAt: now(), updatedAt: now() };
       db.notes.push(n);
@@ -415,13 +482,6 @@ async function handleApi(req, res, url) {
 
   if (resource === 'trash') {
     if (method === 'GET') return sendJson(res, 200, trashList());
-    if (method === 'DELETE') {
-      const t = trashList();
-      for (const p of t.patients) purgePatient(p);
-      purgeNotes(t.notes);
-      commit();
-      return sendJson(res, 200, { ok: true });
-    }
   }
 
   // 写真・動画のアップロード（本文はファイルそのもの）
@@ -431,7 +491,7 @@ async function handleApi(req, res, url) {
     if (!UPLOAD_EXT.has(ext)) return sendJson(res, 400, { error: 'この種類のファイルは使えません（写真か動画を選んでください）' });
     if (ext === '.jpeg') ext = '.jpg';
     const length = Number(req.headers['content-length'] || 0);
-    if (length > MAX_UPLOAD_BYTES) return sendJson(res, 413, { error: 'ファイルが大きすぎます（500MBまで）' });
+    if (length > MAX_UPLOAD_BYTES) return sendJson(res, 413, { error: 'ファイルが大きすぎます（100MBまで）' });
     const file = `${Date.now()}-${newId()}${ext}`;
     const target = path.join(UPLOAD_DIR, file);
     const out = fs.createWriteStream(target);
@@ -444,7 +504,7 @@ async function handleApi(req, res, url) {
         req.unpipe(out);
         out.destroy();
         fs.unlink(target, () => {});
-        sendJson(res, 413, { error: 'ファイルが大きすぎます（500MBまで）' });
+        sendJson(res, 413, { error: 'ファイルが大きすぎます（100MBまで）' });
       }
     });
     req.pipe(out);
@@ -506,6 +566,8 @@ function lanAddresses() {
 }
 
 dailyBackup();
+purgeExpiredTrash();
+setInterval(purgeExpiredTrash, 60 * 60 * 1000);
 server.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('  介護日記 サーバーが起動しました');

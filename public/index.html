@@ -13,10 +13,11 @@
   </header>
 
   <nav class="tabs" role="tablist">
-    <button class="tab active" data-view="date" role="tab">📅 日付で見る</button>
-    <button class="tab" data-view="patient" role="tab">👤 利用者で見る</button>
-    <button class="tab" data-view="manage" role="tab">⚙️ 利用者の管理</button>
-    <button class="tab" data-view="trash" role="tab">🗑 ゴミ箱</button>
+    <button class="tab active" data-view="date" role="tab"><span class="ic">📅</span><span class="lb">日付で見る</span><span class="lb-s">日付</span></button>
+    <button class="tab" data-view="patient" role="tab"><span class="ic">👤</span><span class="lb">利用者で見る</span><span class="lb-s">利用者</span></button>
+    <button class="tab" data-view="summary" role="tab"><span class="ic">📊</span><span class="lb">年間まとめ</span><span class="lb-s">まとめ</span></button>
+    <button class="tab" data-view="manage" role="tab"><span class="ic">⚙️</span><span class="lb">利用者の管理</span><span class="lb-s">管理</span></button>
+    <button class="tab" data-view="trash" role="tab"><span class="ic">🗑</span><span class="lb">ゴミ箱</span><span class="lb-s">ゴミ箱</span></button>
   </nav>
 
   <main>
@@ -32,12 +33,15 @@
           <button class="chip-btn" data-range="month">1か月</button>
           <button class="chip-btn" data-range="all">すべて</button>
         </div>
-        <div class="row">
-          <label>日付をえらぶ <input type="date" id="date-pick"></label>
-          <label>種類 <select id="date-category"><option value="">すべての種類</option></select></label>
-          <label>ことばで探す <input type="search" id="date-search" placeholder="例：転倒、発熱"></label>
-          <label class="check"><input type="checkbox" id="date-important"> ⭐ 重要だけ</label>
-        </div>
+        <label class="check"><input type="checkbox" id="date-important"> ⭐ 重要だけ</label>
+        <details id="date-more">
+          <summary>🔍 詳しく探す</summary>
+          <div class="row">
+            <label>日付をえらぶ <input type="date" id="date-pick"></label>
+            <label>種類 <select id="date-category"><option value="">すべての種類</option></select></label>
+            <label>ことばで探す <input type="search" id="date-search" placeholder="例：転倒、発熱"></label>
+          </div>
+        </details>
       </div>
       <div class="toolbar">
         <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
@@ -60,6 +64,20 @@
       <div id="patient-list" class="list"></div>
     </section>
 
+    <!-- 年間まとめ -->
+    <section id="view-summary" class="view" hidden>
+      <div class="filters">
+        <div class="row">
+          <label>年 <select id="sum-year"></select></label>
+          <label>利用者 <select id="sum-patient"></select></label>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
+      </div>
+      <div id="sum-body"></div>
+    </section>
+
     <!-- 利用者の管理（枠） -->
     <section id="view-manage" class="view" hidden>
       <p class="hint">利用者は <b id="slot-count">10</b> 人まで登録できます。退所・ご逝去のときは「🗑 削除」を押すと、その枠が「空き」になり、新しい方を登録できます。<br>削除した方の記録はゴミ箱に残り、あとから元に戻せます。</p>
@@ -69,7 +87,7 @@
 
     <!-- ゴミ箱 -->
     <section id="view-trash" class="view" hidden>
-      <p class="hint">消したものはここに入ります。「↩️ 元に戻す」で戻せます。「完全に消す」を押すと二度と戻せません。</p>
+      <p class="hint">消したものはここに入ります。「↩️ 元に戻す」で戻せます。<br>ゴミ箱の中身は <b><span id="trash-days">30</span>日後に自動で完全に消えます</b>。</p>
       <div id="trash-body"></div>
     </section>
   </main>
@@ -77,7 +95,7 @@
   <!-- 記録の入力画面 -->
   <dialog id="note-dialog">
     <form id="note-form" class="form" method="dialog">
-      <h2 id="nform-title">記録を書く</h2>
+      <h2 id="nform-title" tabindex="-1" autofocus>記録を書く</h2>
       <input type="hidden" name="id">
       <div class="row">
         <label>日付<input type="date" name="date" required></label>
@@ -98,9 +116,10 @@
       <label>内容<textarea name="text" rows="6" placeholder="ここに書いてください"></textarea></label>
 
       <div class="media-input">
-        <label class="btn btn-media">📷 写真・動画を追加
+        <label class="btn btn-media">📷 写真を追加
           <input type="file" id="nform-files" accept="image/*,video/*" multiple hidden>
         </label>
+        <small class="muted">短い動画（100MBまで）も追加できます。写真は自動で小さくして保存します。</small>
         <div id="nform-media" class="media-grid"></div>
         <div id="nform-progress" class="progress" hidden></div>
       </div>
@@ -121,7 +140,7 @@
   <!-- 利用者の登録・編集 -->
   <dialog id="patient-dialog">
     <form id="patient-form" class="form" method="dialog">
-      <h2 id="pform-title">利用者を登録する</h2>
+      <h2 id="pform-title" tabindex="-1" autofocus>利用者を登録する</h2>
       <input type="hidden" name="id">
       <input type="hidden" name="slot">
       <label>名前（必須）<input name="name" required maxlength="50" placeholder="例：山田 花子"></label>

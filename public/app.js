@@ -17,6 +17,8 @@ const CATEGORY_COLORS = {
 };
 const AUTO_COLORS = ['#00695c', '#4527a0', '#9e6a00', '#37474f', '#880e4f', '#1565c0', '#558b2f', '#bf360c'];
 const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
+const PAGE = 50; // 1回に表示する記録の数
+const PHOTO_MAX_PX = 1600; // 写真はこの大きさまで縮小して保存
 
 const state = {
   view: 'date',
@@ -30,6 +32,7 @@ const state = {
   form: { patientId: null, media: [] },
   uploading: 0,
   openTrash: null,
+  lists: { date: { key: '', count: PAGE }, patient: { key: '', count: PAGE } },
 };
 
 const $ = (s) => document.querySelector(s);
@@ -189,12 +192,28 @@ function currentQuery() {
   return { q, title };
 }
 
+// 記録を PAGE 件ずつ表示し、「もっと見る」で続きを読み込む
+async function loadPaged(name, el, q, showPatient, emptyHtml) {
+  const list = state.lists[name];
+  const key = q.toString();
+  if (list.key !== key) {
+    list.key = key;
+    list.count = PAGE;
+  }
+  q.set('limit', list.count);
+  const { notes, total } = await api('notes?' + q);
+  const rest = total - notes.length;
+  el.innerHTML = notes.length
+    ? notesHtml(notes, showPatient, 'normal') +
+      (rest > 0 ? `<button class="btn more-btn" data-more="${name}">⬇ もっと見る（あと ${rest} 件）</button>` : '')
+    : emptyHtml;
+}
+
 async function loadDateView() {
   const { q } = currentQuery();
-  const notes = await api('notes?' + q);
-  $('#date-list').innerHTML = notes.length
-    ? notesHtml(notes, true, 'normal')
-    : '<div class="empty">記録はまだありません。<br>右上の「＋ 記録を書く」から書けます。</div>';
+  const active = state.pickedDate || $('#date-category').value || $('#date-search').value.trim();
+  $('#date-more summary').textContent = active ? '🔍 詳しく探す（条件あり）' : '🔍 詳しく探す';
+  await loadPaged('date', $('#date-list'), q, true, '<div class="empty">記録はまだありません。<br>「＋ 記録を書く」から書けます。</div>');
 }
 
 function renderCategoryFilter() {
@@ -240,12 +259,61 @@ async function loadPatientView() {
   head.innerHTML = p
     ? `<h2>👤 ${esc(p.name)} 様の記録</h2>${p.memo ? `<div class="patient-memo">📌 ${esc(p.memo)}</div>` : ''}`
     : '<h2>全体・共有の記録</h2>';
-  listEl.innerHTML = notesHtml(await api('notes?patientId=' + encodeURIComponent(state.selectedPatient)), false, 'normal');
+  const q = new URLSearchParams({ patientId: state.selectedPatient });
+  await loadPaged('patient', listEl, q, false, '<div class="empty">記録はありません。</div>');
 }
 
 function selectPatient(id) {
   state.selectedPatient = id;
   loadPatientView().catch((e) => toast(e.message));
+}
+
+// ---------- 年間まとめ ----------
+
+function barsHtml(title, rows, colorOf) {
+  if (!rows.length) return '';
+  const max = Math.max(1, ...rows.map((r) => r[1]));
+  return `<div class="bars"><h3>${title}</h3>${rows
+    .map(
+      ([label, n]) => `<div class="bar-row"><span class="bl" title="${esc(label)}">${esc(label)}</span>
+        <span class="bt"><span class="bf" style="width:${(n / max) * 100}%;background:${colorOf ? colorOf(label) : 'var(--blue)'}"></span></span>
+        <span class="bn">${n}件</span></div>`
+    )
+    .join('')}</div>`;
+}
+
+function summaryTitle() {
+  const sel = $('#sum-patient');
+  return `年間まとめ ${$('#sum-year').value}年（${sel.options[sel.selectedIndex]?.text || '全員'}）`;
+}
+
+async function loadSummary() {
+  const yearSel = $('#sum-year');
+  const patSel = $('#sum-patient');
+  const curPatient = patSel.value;
+  patSel.innerHTML =
+    '<option value="">全員</option>' +
+    state.patients.map((p) => `<option value="${p.id}" ${p.id === curPatient ? 'selected' : ''}>${esc(p.name)} 様</option>`).join('') +
+    `<option value="none" ${curPatient === 'none' ? 'selected' : ''}>全体・共有</option>`;
+  const s = await api(`summary?year=${encodeURIComponent(yearSel.value)}&patientId=${encodeURIComponent(patSel.value)}`);
+  yearSel.innerHTML = s.years.map((y) => `<option ${y === s.year ? 'selected' : ''}>${y}</option>`).join('');
+  const busiest = s.months.indexOf(Math.max(...s.months));
+  let html = `<div class="stats">
+      <div class="stat"><div class="num">${s.total}</div><div class="lab">記録の合計</div></div>
+      <div class="stat"><div class="num">${s.important.length}</div><div class="lab">⭐ 重要な記録</div></div>
+      <div class="stat"><div class="num">${s.categories[0] ? esc(s.categories[0][0]) : '－'}</div><div class="lab">いちばん多い種類</div></div>
+      <div class="stat"><div class="num">${s.total ? busiest + 1 + '月' : '－'}</div><div class="lab">記録がいちばん多い月</div></div>
+    </div>`;
+  if (!s.total) {
+    $('#sum-body').innerHTML = html + '<div class="empty">この年の記録はありません。</div>';
+    return;
+  }
+  html += barsHtml('月ごとの記録', s.months.map((n, i) => [`${i + 1}月`, n]));
+  html += barsHtml('種類ごとの記録', s.categories, catColor);
+  if (!patSel.value) html += barsHtml('利用者ごとの記録', s.patients.map((p) => [p.name, p.count]), () => 'var(--green)');
+  html += `<h2>⭐ 重要な記録（${s.important.length}件）</h2>`;
+  html += s.important.length ? notesHtml(s.important, !patSel.value, 'readonly') : '<div class="empty">重要な記録はありません。</div>';
+  $('#sum-body').innerHTML = html;
 }
 
 // ---------- 利用者の管理（枠） ----------
@@ -291,6 +359,11 @@ function openPatientForm(p, slot) {
 
 // ---------- ゴミ箱 ----------
 
+function daysLeft(iso) {
+  const d = Math.ceil((new Date(iso) - Date.now()) / 86400000);
+  return d <= 1 ? '⏳ まもなく自動で消えます' : `⏳ あと ${d} 日で自動で消えます`;
+}
+
 async function loadTrash() {
   const t = await api('trash');
   const el = $('#trash-body');
@@ -307,7 +380,8 @@ async function loadTrash() {
       html += `<div class="trash-item">
         <div class="row-head">
           <div><div class="name">${esc(p.name)} 様</div>
-            <div class="sub">削除した日：${jpDateTime(p.deletedAt)}　／　記録 ${p.noteCount} 件</div></div>
+            <div class="sub">削除した日：${jpDateTime(p.deletedAt)}　／　記録 ${p.noteCount} 件</div>
+            <div class="sub">${daysLeft(p.expiresAt)}</div></div>
           <div class="actions">
             ${p.noteCount ? `<button class="btn btn-edit" data-tview="${p.id}">${open ? '▲ 閉じる' : '📖 記録を見る'}</button>` : ''}
             <button class="btn btn-restore" data-prestore="${p.id}">↩️ 元に戻す</button>
@@ -322,10 +396,9 @@ async function loadTrash() {
     html += '<h2>消した記録</h2>';
     for (const n of t.notes) {
       const name = trashedNames.get(n.patientId) || patientName(n.patientId);
-      html += `<div class="trash-item"><div class="sub">消した日：${jpDateTime(n.deletedAt)}</div>${noteHtml(n, true, 'trash', name)}</div>`;
+      html += `<div class="trash-item"><div class="sub">消した日：${jpDateTime(n.deletedAt)}　／　${daysLeft(n.expiresAt)}</div>${noteHtml(n, true, 'trash', name)}</div>`;
     }
   }
-  html += '<div class="toolbar" style="margin-top:20px"><button class="btn btn-del" id="trash-empty">🗑 ゴミ箱を空にする（完全に消す）</button></div>';
   el.innerHTML = html;
   if (state.openTrash && trashedNames.has(state.openTrash)) {
     const id = state.openTrash;
@@ -400,6 +473,25 @@ function uploadFile(file) {
   });
 }
 
+// スマホの写真は大きいので、保存前に縮小して軽くする（失敗したらそのまま送る）
+async function shrinkImage(file) {
+  if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const scale = Math.min(1, PHOTO_MAX_PX / Math.max(bmp.width, bmp.height));
+    if (scale === 1 && file.size < 800 * 1024) return file;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bmp.width * scale);
+    canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.85));
+    if (!blob) return file;
+    return new File([blob], file.name.replace(/\.[^.]*$/, '') + '.jpg', { type: 'image/jpeg' });
+  } catch {
+    return file;
+  }
+}
+
 async function addFiles(files) {
   const prog = $('#nform-progress');
   const save = $('#nform-save');
@@ -409,7 +501,7 @@ async function addFiles(files) {
   try {
     for (const file of files) {
       try {
-        state.form.media.push(await uploadFile(file));
+        state.form.media.push(await uploadFile(await shrinkImage(file)));
         renderFormChoices();
       } catch (e) {
         toast(e.message);
@@ -461,6 +553,7 @@ async function refresh() {
     renderCategoryFilter();
     if (state.view === 'date') await loadDateView();
     else if (state.view === 'patient') await loadPatientView();
+    else if (state.view === 'summary') await loadSummary();
     else if (state.view === 'manage') renderSlots();
     else await loadTrash();
   } catch (e) {
@@ -510,6 +603,8 @@ $('#date-search').addEventListener('input', () => {
 });
 $('#date-category').addEventListener('change', () => loadDateView().catch((e) => toast(e.message)));
 $('#date-important').addEventListener('change', () => loadDateView().catch((e) => toast(e.message)));
+$('#sum-year').addEventListener('change', () => loadSummary().catch((e) => toast(e.message)));
+$('#sum-patient').addEventListener('change', () => loadSummary().catch((e) => toast(e.message)));
 
 $('#patient-search').addEventListener('input', renderPatientButtons);
 $('#patient-buttons').addEventListener('click', (e) => {
@@ -517,12 +612,25 @@ $('#patient-buttons').addEventListener('click', (e) => {
   if (b) selectPatient(b.dataset.pid);
 });
 
+// 印刷：「もっと見る」で隠れている記録もすべて読み込んでから印刷する
+async function printView() {
+  if (state.view === 'summary') {
+    $('#print-title').textContent = summaryTitle();
+  } else {
+    $('#print-title').textContent = currentQuery().title;
+    const list = state.lists[state.view];
+    if (list && document.querySelector(`#view-${state.view} [data-more]`)) {
+      list.count = 100000;
+      await (state.view === 'date' ? loadDateView() : loadPatientView());
+    }
+  }
+  window.print();
+}
+
 // 印刷・Excel
 document.addEventListener('click', (e) => {
-  if (e.target.closest('[data-print]')) {
-    $('#print-title').textContent = currentQuery().title;
-    window.print();
-  } else if (e.target.closest('[data-export]')) {
+  if (e.target.closest('[data-print]')) printView().catch((err) => toast(err.message));
+  else if (e.target.closest('[data-export]')) {
     const a = document.createElement('a');
     a.href = '/api/export.csv?' + currentQuery().q;
     document.body.appendChild(a);
@@ -561,8 +669,9 @@ document.addEventListener('click', async (e) => {
   } else if ((b = t('[data-tview]'))) {
     state.openTrash = state.openTrash === b.dataset.tview ? null : b.dataset.tview;
     loadTrash().catch((err) => toast(err.message));
-  } else if (t('#trash-empty')) {
-    if (confirm('ゴミ箱の中身をすべて完全に消しますか？\n二度と元に戻せません。')) run(() => api('trash', { method: 'DELETE' }), 'ゴミ箱を空にしました');
+  } else if ((b = t('[data-more]'))) {
+    state.lists[b.dataset.more].count += PAGE;
+    (b.dataset.more === 'date' ? loadDateView() : loadPatientView()).catch((err) => toast(err.message));
   } else if ((b = t('.media-item')) && !t('[data-remove]')) {
     const src = b.dataset.src;
     $('#viewer-body').innerHTML = b.dataset.type === 'video'
@@ -639,6 +748,7 @@ $('#pform-cancel').addEventListener('click', () => $('#patient-dialog').close())
 api('info')
   .then((info) => {
     state.slots = info.slots;
+    $('#trash-days').textContent = info.trashDays;
     if (state.view === 'manage') renderSlots();
     const urls = info.addresses.map((ip) => `<code>http://${ip}:${info.port}</code>`).join('<br>');
     $('#server-info').innerHTML = `💻 ほかのパソコン・タブレットからは、同じネットワークにつないで次のアドレスを開いてください：<br>${urls || '（ネットワークが見つかりません）'}`;
