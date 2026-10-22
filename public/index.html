@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>介護日記</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>📒 介護日記</h1>
+    <button id="btn-new" class="btn btn-new">＋ 記録を書く</button>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-view="date" role="tab">📅 日付で見る</button>
+    <button class="tab" data-view="patient" role="tab">👤 利用者で見る</button>
+    <button class="tab" data-view="manage" role="tab">⚙️ 利用者の登録</button>
+  </nav>
+
+  <main>
+    <!-- 日付で見る -->
+    <section id="view-date" class="view">
+      <div class="filters">
+        <div class="quick">
+          <button class="chip-btn active" data-range="today">今日</button>
+          <button class="chip-btn" data-range="yesterday">昨日</button>
+          <button class="chip-btn" data-range="week">1週間</button>
+          <button class="chip-btn" data-range="month">1か月</button>
+          <button class="chip-btn" data-range="all">すべて</button>
+        </div>
+        <div class="row">
+          <label>日付をえらぶ <input type="date" id="date-pick"></label>
+          <label>ことばで探す <input type="search" id="date-search" placeholder="例：転倒、発熱"></label>
+          <label class="check"><input type="checkbox" id="date-important"> ⭐ 重要だけ</label>
+        </div>
+      </div>
+      <div id="date-list" class="list"></div>
+    </section>
+
+    <!-- 利用者で見る -->
+    <section id="view-patient" class="view" hidden>
+      <div class="filters">
+        <label>名前で探す <input type="search" id="patient-search" placeholder="名前 または ふりがな"></label>
+        <div id="patient-buttons" class="patient-grid"></div>
+      </div>
+      <div id="patient-head"></div>
+      <div id="patient-list" class="list"></div>
+    </section>
+
+    <!-- 利用者の登録 -->
+    <section id="view-manage" class="view" hidden>
+      <div class="card">
+        <h2 id="pform-title">利用者を追加する</h2>
+        <form id="patient-form" class="form">
+          <input type="hidden" name="id">
+          <label>名前（必須）<input name="name" required maxlength="50" placeholder="例：山田 花子"></label>
+          <label>ふりがな<input name="kana" maxlength="50" placeholder="例：やまだ はなこ"></label>
+          <label>部屋番号<input name="room" maxlength="20" placeholder="例：101"></label>
+          <label>メモ（注意点など）<textarea name="memo" rows="3" maxlength="1000" placeholder="例：アレルギー：卵"></textarea></label>
+          <div class="actions">
+            <button type="submit" class="btn btn-save">💾 保存する</button>
+            <button type="button" id="pform-cancel" class="btn btn-gray" hidden>やめる</button>
+          </div>
+        </form>
+      </div>
+      <h2>登録している利用者</h2>
+      <div id="manage-list"></div>
+      <div id="server-info" class="info"></div>
+    </section>
+  </main>
+
+  <!-- 記録の入力画面 -->
+  <dialog id="note-dialog">
+    <form id="note-form" class="form" method="dialog">
+      <h2 id="nform-title">記録を書く</h2>
+      <input type="hidden" name="id">
+      <div class="row">
+        <label>日付<input type="date" name="date" required></label>
+        <label>時刻<input type="time" name="time"></label>
+      </div>
+
+      <fieldset>
+        <legend>だれの記録？</legend>
+        <div id="nform-patients" class="choice-grid"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>種類</legend>
+        <div id="nform-categories" class="choice-grid"></div>
+      </fieldset>
+
+      <label>内容<textarea name="text" rows="6" placeholder="ここに書いてください"></textarea></label>
+
+      <div class="media-input">
+        <label class="btn btn-media">📷 写真・動画を追加
+          <input type="file" id="nform-files" accept="image/*,video/*" multiple hidden>
+        </label>
+        <div id="nform-media" class="media-grid"></div>
+        <div id="nform-progress" class="progress" hidden></div>
+      </div>
+
+      <div class="row">
+        <label>記入者<input name="author" maxlength="30" placeholder="あなたの名前"></label>
+        <label class="check big"><input type="checkbox" name="important"> ⭐ 重要（申し送り）</label>
+      </div>
+
+      <p id="nform-error" class="error" hidden></p>
+      <div class="actions">
+        <button type="submit" class="btn btn-save" id="nform-save">💾 保存する</button>
+        <button type="button" class="btn btn-gray" id="nform-cancel">やめる</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 写真・動画の拡大表示 -->
+  <dialog id="viewer" class="viewer">
+    <div id="viewer-body"></div>
+    <button class="btn btn-gray" id="viewer-close">✕ 閉じる</button>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

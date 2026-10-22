@@ -1,0 +1,13 @@
+{
+  "name": "kaigo-nikki",
+  "version": "1.0.0",
+  "description": "介護の日々の記録アプリ（オフライン・LAN共有）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
