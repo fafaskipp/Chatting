@@ -16,7 +16,7 @@ const DB_FILE = path.join(DATA_DIR, 'db.json');
 const BACKUP_DIR = path.join(DATA_DIR, 'backups');
 const MAX_UPLOAD_BYTES = 500 * 1024 * 1024; // 500MB（動画用）
 const MAX_JSON_BYTES = 1024 * 1024;
-const MAX_PATIENTS = 50;
+const SLOT_COUNT = Number(process.env.SLOTS) || 10; // 利用者の枠の数
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -48,7 +48,21 @@ function loadDb() {
   const db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
   db.patients = db.patients || [];
   db.notes = db.notes || [];
+  // 以前の版のデータに枠番号を付ける
+  for (const p of db.patients) {
+    if (!p.slot && !p.deletedAt) p.slot = firstFreeSlot(db);
+  }
   return db;
+}
+
+function firstFreeSlot(d = db) {
+  const used = new Set(d.patients.filter((p) => !p.deletedAt).map((p) => p.slot));
+  for (let i = 1; i <= SLOT_COUNT; i++) if (!used.has(i)) return i;
+  return null;
+}
+
+function slotOwner(slot) {
+  return db.patients.find((p) => !p.deletedAt && p.slot === slot);
 }
 
 let db = loadDb();
@@ -148,9 +162,13 @@ function serveFile(req, res, filePath, extraHeaders = {}) {
 
 // ---------- 入力チェック ----------
 
+function fail(status, message) {
+  return Object.assign(new Error(message), { status });
+}
+
 function cleanPatient(body) {
   const name = str(body.name, 50);
-  if (!name) throw Object.assign(new Error('名前を入力してください'), { status: 400 });
+  if (!name) throw fail(400, '名前を入力してください');
   return {
     name,
     kana: str(body.kana, 50),
@@ -161,23 +179,23 @@ function cleanPatient(body) {
 
 function cleanNote(body) {
   const date = str(body.date, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw Object.assign(new Error('日付が正しくありません'), { status: 400 });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw fail(400, '日付が正しくありません');
   const time = str(body.time, 5);
   const patientId = str(body.patientId, 32) || null;
-  if (patientId && !db.patients.some((p) => p.id === patientId)) {
-    throw Object.assign(new Error('利用者が見つかりません'), { status: 400 });
+  if (patientId && !db.patients.some((p) => p.id === patientId && !p.deletedAt)) {
+    throw fail(400, '利用者が見つかりません');
   }
   const media = Array.isArray(body.media) ? body.media : [];
   const cleanMedia = media
     .map((m) => ({ file: path.basename(str(m && m.file, 100)), type: m && m.type === 'video' ? 'video' : 'image' }))
     .filter((m) => m.file && fs.existsSync(path.join(UPLOAD_DIR, m.file)));
   const text = str(body.text, 20000);
-  if (!text && cleanMedia.length === 0) throw Object.assign(new Error('内容か写真・動画を入れてください'), { status: 400 });
+  if (!text && cleanMedia.length === 0) throw fail(400, '内容か写真・動画を入れてください');
   return {
     date,
     time: /^\d{2}:\d{2}$/.test(time) ? time : '',
     patientId,
-    category: str(body.category, 20) || 'その他',
+    category: str(body.category, 30) || 'その他',
     important: Boolean(body.important),
     author: str(body.author, 30),
     text,
@@ -194,88 +212,213 @@ function sortNotes(notes) {
 
 // ---------- API ----------
 
+const DEFAULT_CATEGORIES = ['食事', '水分', '排泄', '入浴', '服薬・薬', '体調', '睡眠', '事故・ケガ', 'レク・活動', '家族連絡', 'その他'];
+
+function activePatients() {
+  return db.patients.filter((p) => !p.deletedAt);
+}
+
+function filterNotes(q) {
+  const patientId = q.get('patientId');
+  const from = q.get('from');
+  const to = q.get('to');
+  const category = q.get('category');
+  const keyword = (q.get('q') || '').trim().toLowerCase();
+  const importantOnly = q.get('important') === '1';
+  const inTrash = q.get('trash') === '1'; // ゴミ箱の利用者の記録を見るとき
+  return sortNotes(
+    db.notes.filter((n) => {
+      if (inTrash ? !n.deletedWithPatient : n.deletedAt) return false;
+      if (patientId === 'none' ? n.patientId : patientId && n.patientId !== patientId) return false;
+      if (from && n.date < from) return false;
+      if (to && n.date > to) return false;
+      if (category && n.category !== category) return false;
+      if (importantOnly && !n.important) return false;
+      if (keyword && !`${n.text} ${n.author} ${n.category}`.toLowerCase().includes(keyword)) return false;
+      return true;
+    })
+  );
+}
+
+function csvCell(v) {
+  const s = String(v ?? '');
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function exportCsv(res, notes) {
+  const names = new Map(db.patients.map((p) => [p.id, p.name]));
+  const rows = [['日付', '時刻', '利用者', '種類', '重要', '内容', '記入者', '写真・動画']];
+  for (const n of notes) {
+    rows.push([
+      n.date,
+      n.time,
+      n.patientId ? names.get(n.patientId) || '' : '全体・共有',
+      n.category,
+      n.important ? '★' : '',
+      n.text,
+      n.author,
+      n.media.length ? `${n.media.length}件` : '',
+    ]);
+  }
+  // Excel で文字化けしないよう BOM 付き UTF-8
+  const body = '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+  const filename = `介護日記_${localDate()}.csv`;
+  res.writeHead(200, {
+    'Content-Type': 'text/csv; charset=utf-8',
+    'Content-Disposition': `attachment; filename="kaigo.csv"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+    'Cache-Control': 'no-store',
+  });
+  res.end(body);
+}
+
+function trashList() {
+  const patients = db.patients
+    .filter((p) => p.deletedAt)
+    .map((p) => ({ ...p, noteCount: db.notes.filter((n) => n.deletedWithPatient === p.id).length }))
+    .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
+  const notes = db.notes
+    .filter((n) => n.deletedAt && !n.deletedWithPatient)
+    .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
+  return { patients, notes };
+}
+
+function purgeNotes(notes) {
+  const ids = new Set(notes.map((n) => n.id));
+  db.notes = db.notes.filter((n) => !ids.has(n.id));
+  removeUnusedMedia(notes.flatMap((n) => n.media.map((m) => m.file)));
+}
+
+function purgePatient(p) {
+  purgeNotes(db.notes.filter((n) => n.deletedWithPatient === p.id));
+  db.patients = db.patients.filter((x) => x.id !== p.id);
+}
+
 async function handleApi(req, res, url) {
-  const parts = url.pathname.split('/').filter(Boolean); // ['api', 'notes', id?]
+  const parts = url.pathname.split('/').filter(Boolean); // ['api', 'notes', id?, action?]
   const resource = parts[1];
   const id = parts[2];
+  const action = parts[3];
   const method = req.method;
+  const now = () => new Date().toISOString();
 
   if (resource === 'info' && method === 'GET') {
-    return sendJson(res, 200, { addresses: lanAddresses(), port: PORT, version: db.version || 0 });
+    return sendJson(res, 200, { addresses: lanAddresses(), port: PORT, slots: SLOT_COUNT });
   }
 
   if (resource === 'version' && method === 'GET') {
     return sendJson(res, 200, { version: db.version || 0 });
   }
 
+  if (resource === 'categories' && method === 'GET') {
+    const used = db.notes.filter((n) => !n.deletedAt).map((n) => n.category);
+    return sendJson(res, 200, [...new Set([...DEFAULT_CATEGORIES, ...used])].filter(Boolean));
+  }
+
   if (resource === 'patients') {
     if (method === 'GET' && !id) {
-      const list = [...db.patients].sort((a, b) => (a.kana || a.name).localeCompare(b.kana || b.name, 'ja'));
-      return sendJson(res, 200, list);
+      return sendJson(res, 200, activePatients().sort((a, b) => a.slot - b.slot));
     }
     if (method === 'POST' && !id) {
-      if (db.patients.length >= MAX_PATIENTS) return sendJson(res, 400, { error: '利用者が多すぎます' });
-      const p = { id: newId(), ...cleanPatient(await readJson(req)), createdAt: new Date().toISOString() };
+      const body = await readJson(req);
+      const slot = Number(body.slot) || firstFreeSlot();
+      if (!slot || slot < 1 || slot > SLOT_COUNT) throw fail(400, '空いている枠がありません。先にだれかを削除してください');
+      if (slotOwner(slot)) throw fail(400, `No.${slot} の枠はもう使われています`);
+      const p = { id: newId(), slot, ...cleanPatient(body), createdAt: now() };
       db.patients.push(p);
       commit();
       return sendJson(res, 201, p);
     }
     const p = db.patients.find((x) => x.id === id);
     if (!p) return sendJson(res, 404, { error: '利用者が見つかりません' });
-    if (method === 'PUT') {
-      Object.assign(p, cleanPatient(await readJson(req)), { updatedAt: new Date().toISOString() });
+    if (method === 'PUT' && !action && !p.deletedAt) {
+      Object.assign(p, cleanPatient(await readJson(req)), { updatedAt: now() });
       commit();
       return sendJson(res, 200, p);
     }
-    if (method === 'DELETE') {
-      const count = db.notes.filter((n) => n.patientId === id).length;
-      if (count > 0) return sendJson(res, 400, { error: `この利用者の記録が ${count} 件あるため削除できません` });
-      db.patients = db.patients.filter((x) => x.id !== id);
+    // 削除 → 記録といっしょにゴミ箱へ。枠は空きになる
+    if (method === 'DELETE' && !action && !p.deletedAt) {
+      p.deletedAt = now();
+      p.formerSlot = p.slot;
+      p.slot = null;
+      for (const n of db.notes) {
+        if (n.patientId === p.id && !n.deletedAt) {
+          n.deletedAt = p.deletedAt;
+          n.deletedWithPatient = p.id;
+        }
+      }
+      commit();
+      return sendJson(res, 200, { ok: true });
+    }
+    if (method === 'POST' && action === 'restore' && p.deletedAt) {
+      const slot = p.formerSlot && !slotOwner(p.formerSlot) ? p.formerSlot : firstFreeSlot();
+      if (!slot) throw fail(400, '空いている枠がないため戻せません。先にだれかを削除してください');
+      p.slot = slot;
+      delete p.deletedAt;
+      delete p.formerSlot;
+      for (const n of db.notes) {
+        if (n.deletedWithPatient === p.id) {
+          delete n.deletedAt;
+          delete n.deletedWithPatient;
+        }
+      }
+      commit();
+      return sendJson(res, 200, p);
+    }
+    if (method === 'DELETE' && action === 'purge' && p.deletedAt) {
+      purgePatient(p);
       commit();
       return sendJson(res, 200, { ok: true });
     }
   }
 
+  if (resource === 'export.csv' && method === 'GET') {
+    return exportCsv(res, filterNotes(url.searchParams));
+  }
+
   if (resource === 'notes') {
-    if (method === 'GET' && !id) {
-      const q = url.searchParams;
-      const patientId = q.get('patientId');
-      const from = q.get('from');
-      const to = q.get('to');
-      const category = q.get('category');
-      const keyword = (q.get('q') || '').trim().toLowerCase();
-      const importantOnly = q.get('important') === '1';
-      let list = db.notes.filter((n) => {
-        if (patientId === 'none' ? n.patientId : patientId && n.patientId !== patientId) return false;
-        if (from && n.date < from) return false;
-        if (to && n.date > to) return false;
-        if (category && n.category !== category) return false;
-        if (importantOnly && !n.important) return false;
-        if (keyword && !`${n.text} ${n.author}`.toLowerCase().includes(keyword)) return false;
-        return true;
-      });
-      return sendJson(res, 200, sortNotes(list));
-    }
+    if (method === 'GET' && !id) return sendJson(res, 200, filterNotes(url.searchParams));
     if (method === 'POST' && !id) {
-      const now = new Date().toISOString();
-      const n = { id: newId(), ...cleanNote(await readJson(req)), createdAt: now, updatedAt: now };
+      const n = { id: newId(), ...cleanNote(await readJson(req)), createdAt: now(), updatedAt: now() };
       db.notes.push(n);
       commit();
       return sendJson(res, 201, n);
     }
     const n = db.notes.find((x) => x.id === id);
     if (!n) return sendJson(res, 404, { error: '記録が見つかりません' });
-    if (method === 'GET') return sendJson(res, 200, n);
-    if (method === 'PUT') {
+    if (method === 'GET' && !action) return sendJson(res, 200, n);
+    if (method === 'PUT' && !action && !n.deletedAt) {
       const before = n.media.map((m) => m.file);
-      Object.assign(n, cleanNote(await readJson(req)), { updatedAt: new Date().toISOString() });
+      Object.assign(n, cleanNote(await readJson(req)), { updatedAt: now() });
       removeUnusedMedia(before);
       commit();
       return sendJson(res, 200, n);
     }
+    if (method === 'DELETE' && !action && !n.deletedAt) {
+      n.deletedAt = now();
+      commit();
+      return sendJson(res, 200, { ok: true });
+    }
+    if (method === 'POST' && action === 'restore' && n.deletedAt && !n.deletedWithPatient) {
+      const owner = n.patientId && db.patients.find((x) => x.id === n.patientId);
+      if (owner && owner.deletedAt) throw fail(400, `先に ${owner.name} 様をゴミ箱から戻してください`);
+      if (n.patientId && !owner) throw fail(400, 'この記録の利用者はもういません');
+      delete n.deletedAt;
+      commit();
+      return sendJson(res, 200, n);
+    }
+    if (method === 'DELETE' && action === 'purge' && n.deletedAt && !n.deletedWithPatient) {
+      purgeNotes([n]);
+      commit();
+      return sendJson(res, 200, { ok: true });
+    }
+  }
+
+  if (resource === 'trash') {
+    if (method === 'GET') return sendJson(res, 200, trashList());
     if (method === 'DELETE') {
-      db.notes = db.notes.filter((x) => x.id !== id);
-      removeUnusedMedia(n.media.map((m) => m.file));
+      const t = trashList();
+      for (const p of t.patients) purgePatient(p);
+      purgeNotes(t.notes);
       commit();
       return sendJson(res, 200, { ok: true });
     }

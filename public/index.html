@@ -15,10 +15,13 @@
   <nav class="tabs" role="tablist">
     <button class="tab active" data-view="date" role="tab">📅 日付で見る</button>
     <button class="tab" data-view="patient" role="tab">👤 利用者で見る</button>
-    <button class="tab" data-view="manage" role="tab">⚙️ 利用者の登録</button>
+    <button class="tab" data-view="manage" role="tab">⚙️ 利用者の管理</button>
+    <button class="tab" data-view="trash" role="tab">🗑 ゴミ箱</button>
   </nav>
 
   <main>
+    <h2 id="print-title" class="print-only"></h2>
+
     <!-- 日付で見る -->
     <section id="view-date" class="view">
       <div class="filters">
@@ -31,9 +34,14 @@
         </div>
         <div class="row">
           <label>日付をえらぶ <input type="date" id="date-pick"></label>
+          <label>種類 <select id="date-category"><option value="">すべての種類</option></select></label>
           <label>ことばで探す <input type="search" id="date-search" placeholder="例：転倒、発熱"></label>
           <label class="check"><input type="checkbox" id="date-important"> ⭐ 重要だけ</label>
         </div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
+        <button class="btn btn-excel" data-export>📊 Excelで保存</button>
       </div>
       <div id="date-list" class="list"></div>
     </section>
@@ -45,28 +53,24 @@
         <div id="patient-buttons" class="patient-grid"></div>
       </div>
       <div id="patient-head"></div>
+      <div class="toolbar" id="patient-toolbar" hidden>
+        <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
+        <button class="btn btn-excel" data-export>📊 Excelで保存</button>
+      </div>
       <div id="patient-list" class="list"></div>
     </section>
 
-    <!-- 利用者の登録 -->
+    <!-- 利用者の管理（枠） -->
     <section id="view-manage" class="view" hidden>
-      <div class="card">
-        <h2 id="pform-title">利用者を追加する</h2>
-        <form id="patient-form" class="form">
-          <input type="hidden" name="id">
-          <label>名前（必須）<input name="name" required maxlength="50" placeholder="例：山田 花子"></label>
-          <label>ふりがな<input name="kana" maxlength="50" placeholder="例：やまだ はなこ"></label>
-          <label>部屋番号<input name="room" maxlength="20" placeholder="例：101"></label>
-          <label>メモ（注意点など）<textarea name="memo" rows="3" maxlength="1000" placeholder="例：アレルギー：卵"></textarea></label>
-          <div class="actions">
-            <button type="submit" class="btn btn-save">💾 保存する</button>
-            <button type="button" id="pform-cancel" class="btn btn-gray" hidden>やめる</button>
-          </div>
-        </form>
-      </div>
-      <h2>登録している利用者</h2>
-      <div id="manage-list"></div>
+      <p class="hint">利用者は <b id="slot-count">10</b> 人まで登録できます。退所・ご逝去のときは「🗑 削除」を押すと、その枠が「空き」になり、新しい方を登録できます。<br>削除した方の記録はゴミ箱に残り、あとから元に戻せます。</p>
+      <div id="slot-list" class="slot-grid"></div>
       <div id="server-info" class="info"></div>
+    </section>
+
+    <!-- ゴミ箱 -->
+    <section id="view-trash" class="view" hidden>
+      <p class="hint">消したものはここに入ります。「↩️ 元に戻す」で戻せます。「完全に消す」を押すと二度と戻せません。</p>
+      <div id="trash-body"></div>
     </section>
   </main>
 
@@ -86,8 +90,9 @@
       </fieldset>
 
       <fieldset>
-        <legend>種類</legend>
-        <div id="nform-categories" class="choice-grid"></div>
+        <legend>種類（えらぶ か 自由に書く）</legend>
+        <input name="category" maxlength="30" placeholder="例：食事、服薬、転倒、受診 など">
+        <div id="nform-categories" class="cat-chips"></div>
       </fieldset>
 
       <label>内容<textarea name="text" rows="6" placeholder="ここに書いてください"></textarea></label>
@@ -109,6 +114,24 @@
       <div class="actions">
         <button type="submit" class="btn btn-save" id="nform-save">💾 保存する</button>
         <button type="button" class="btn btn-gray" id="nform-cancel">やめる</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 利用者の登録・編集 -->
+  <dialog id="patient-dialog">
+    <form id="patient-form" class="form" method="dialog">
+      <h2 id="pform-title">利用者を登録する</h2>
+      <input type="hidden" name="id">
+      <input type="hidden" name="slot">
+      <label>名前（必須）<input name="name" required maxlength="50" placeholder="例：山田 花子"></label>
+      <label>ふりがな<input name="kana" maxlength="50" placeholder="例：やまだ はなこ"></label>
+      <label>部屋番号<input name="room" maxlength="20" placeholder="例：101"></label>
+      <label>メモ（注意点など）<textarea name="memo" rows="3" maxlength="1000" placeholder="例：アレルギー：卵"></textarea></label>
+      <p id="pform-error" class="error" hidden></p>
+      <div class="actions">
+        <button type="submit" class="btn btn-save">💾 保存する</button>
+        <button type="button" id="pform-cancel" class="btn btn-gray">やめる</button>
       </div>
     </form>
   </dialog>

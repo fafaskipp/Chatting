@@ -1,19 +1,21 @@
 // 介護日記 — 画面の動き
 'use strict';
 
-const CATEGORIES = [
-  { name: '体調', color: '#c62828' },
-  { name: '食事', color: '#ef6c00' },
-  { name: '水分', color: '#0277bd' },
-  { name: '排泄', color: '#6d4c41' },
-  { name: '入浴', color: '#00838f' },
-  { name: '服薬', color: '#6a1b9a' },
-  { name: '睡眠', color: '#283593' },
-  { name: '転倒・事故', color: '#b71c1c' },
-  { name: 'レク・活動', color: '#2e7d32' },
-  { name: '家族連絡', color: '#ad1457' },
-  { name: 'その他', color: '#616161' },
-];
+// よく使う種類の色（それ以外は自動で色を決める）
+const CATEGORY_COLORS = {
+  '食事': '#ef6c00',
+  '水分': '#0277bd',
+  '排泄': '#6d4c41',
+  '入浴': '#00838f',
+  '服薬・薬': '#6a1b9a',
+  '体調': '#c62828',
+  '睡眠': '#283593',
+  '事故・ケガ': '#b71c1c',
+  'レク・活動': '#2e7d32',
+  '家族連絡': '#ad1457',
+  'その他': '#616161',
+};
+const AUTO_COLORS = ['#00695c', '#4527a0', '#9e6a00', '#37474f', '#880e4f', '#1565c0', '#558b2f', '#bf360c'];
 const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
 
 const state = {
@@ -22,9 +24,12 @@ const state = {
   pickedDate: '',
   selectedPatient: null,
   patients: [],
+  categories: Object.keys(CATEGORY_COLORS),
+  slots: 10,
   version: 0,
-  form: { patientId: null, category: 'その他', media: [] },
+  form: { patientId: null, media: [] },
   uploading: 0,
+  openTrash: null,
 };
 
 const $ = (s) => document.querySelector(s);
@@ -58,11 +63,16 @@ function daysAgo(n) {
   return ymd(d);
 }
 
-function jpDate(s) {
+function jpDate(s, withLabel = true) {
   const [y, m, d] = s.split('-').map(Number);
   const w = WEEK[new Date(y, m - 1, d).getDay()];
-  const label = s === daysAgo(0) ? '（今日）' : s === daysAgo(1) ? '（昨日）' : '';
+  const label = !withLabel ? '' : s === daysAgo(0) ? '（今日）' : s === daysAgo(1) ? '（昨日）' : '';
   return `${y}年${m}月${d}日（${w}）${label}`;
+}
+
+function jpDateTime(iso) {
+  const d = new Date(iso);
+  return `${jpDate(ymd(d), false)} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function toast(msg) {
@@ -74,12 +84,15 @@ function toast(msg) {
 }
 
 function catColor(name) {
-  return (CATEGORIES.find((c) => c.name === name) || CATEGORIES[CATEGORIES.length - 1]).color;
+  if (CATEGORY_COLORS[name]) return CATEGORY_COLORS[name];
+  let h = 0;
+  for (const ch of String(name)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+  return AUTO_COLORS[h % AUTO_COLORS.length];
 }
 
 function patientName(id) {
   const p = state.patients.find((x) => x.id === id);
-  return p ? p.name : '（削除された利用者）';
+  return p ? p.name : '';
 }
 
 // ---------- 記録の表示 ----------
@@ -98,14 +111,25 @@ function mediaHtml(media, removable) {
     .join('');
 }
 
-function noteHtml(n, showPatient) {
+// mode: 'normal'（直す・消す）, 'readonly'（ボタンなし）, 'trash'（元に戻す・完全に消す）
+function noteHtml(n, showPatient, mode = 'normal', nameOverride) {
+  const name = nameOverride || patientName(n.patientId);
   const patient = n.patientId
-    ? `<span class="tag tag-patient">👤 ${esc(patientName(n.patientId))} 様</span>`
+    ? `<span class="tag tag-patient">👤 ${esc(name)} 様</span>`
     : `<span class="tag tag-none">全体・共有</span>`;
+  const buttons =
+    mode === 'normal'
+      ? `<button class="btn btn-edit" data-edit="${n.id}">✏️ 直す</button>
+         <button class="btn btn-del" data-del="${n.id}">🗑 消す</button>`
+      : mode === 'trash'
+        ? `<button class="btn btn-restore" data-nrestore="${n.id}">↩️ 元に戻す</button>
+           <button class="btn btn-del" data-npurge="${n.id}">完全に消す</button>`
+        : '';
   return `
     <article class="note ${n.important ? 'important' : ''}">
       <div class="note-head">
         ${n.important ? '<span class="tag" style="background:#f9a825;color:#000">⭐ 重要</span>' : ''}
+        ${mode === 'trash' ? `<span class="note-time">${esc(jpDate(n.date, false))}</span>` : ''}
         <span class="note-time">${n.time ? '🕒 ' + esc(n.time) : ''}</span>
         ${showPatient ? patient : ''}
         <span class="tag" style="background:${catColor(n.category)}">${esc(n.category)}</span>
@@ -114,19 +138,13 @@ function noteHtml(n, showPatient) {
       ${n.media.length ? `<div class="media-grid">${mediaHtml(n.media, false)}</div>` : ''}
       <div class="note-foot">
         <span>${n.author ? '記入：' + esc(n.author) : ''}</span>
-        <span class="actions">
-          <button class="btn btn-edit" data-edit="${n.id}">✏️ 直す</button>
-          <button class="btn btn-del" data-del="${n.id}">🗑 消す</button>
-        </span>
+        <span class="actions">${buttons}</span>
       </div>
     </article>`;
 }
 
-function renderNotes(el, notes, showPatient) {
-  if (!notes.length) {
-    el.innerHTML = '<div class="empty">記録はまだありません。<br>右上の「＋ 記録を書く」から書けます。</div>';
-    return;
-  }
+function notesHtml(notes, showPatient, mode, nameOverride) {
+  if (!notes.length) return '<div class="empty">記録はありません。</div>';
   let html = '';
   let lastDate = '';
   for (const n of notes) {
@@ -134,34 +152,64 @@ function renderNotes(el, notes, showPatient) {
       html += `<h3 class="day-head">${jpDate(n.date)}</h3>`;
       lastDate = n.date;
     }
-    html += noteHtml(n, showPatient);
+    html += noteHtml(n, showPatient, mode, nameOverride);
   }
-  el.innerHTML = html;
+  return html;
 }
 
-async function loadDateView() {
+// 今の画面の検索条件（表示・印刷・Excel 共通）
+function currentQuery() {
   const q = new URLSearchParams();
+  let title = '';
+  if (state.view === 'patient') {
+    if (state.selectedPatient) q.set('patientId', state.selectedPatient);
+    title = state.selectedPatient === 'none' ? '全体・共有の記録' : `${patientName(state.selectedPatient)} 様の記録`;
+    return { q, title };
+  }
+  const range = {
+    today: [daysAgo(0), '', '今日'],
+    yesterday: [daysAgo(1), daysAgo(1), '昨日'],
+    week: [daysAgo(6), '', 'この1週間'],
+    month: [daysAgo(30), '', 'この1か月'],
+    all: ['', '', 'すべて'],
+  }[state.range];
+  let [from, to, label] = range;
   if (state.pickedDate) {
-    q.set('from', state.pickedDate);
-    q.set('to', state.pickedDate);
-  } else if (state.range === 'today') q.set('from', daysAgo(0));
-  else if (state.range === 'yesterday') {
-    q.set('from', daysAgo(1));
-    q.set('to', daysAgo(1));
-  } else if (state.range === 'week') q.set('from', daysAgo(6));
-  else if (state.range === 'month') q.set('from', daysAgo(30));
+    from = to = state.pickedDate;
+    label = jpDate(state.pickedDate, false);
+  }
+  if (from) q.set('from', from);
+  if (to) q.set('to', to);
+  const cat = $('#date-category').value;
+  if (cat) q.set('category', cat);
   const kw = $('#date-search').value.trim();
   if (kw) q.set('q', kw);
   if ($('#date-important').checked) q.set('important', '1');
-  renderNotes($('#date-list'), await api('notes?' + q), true);
+  title = `介護日記（${label}${cat ? '・' + cat : ''}${kw ? '・「' + kw + '」' : ''}${$('#date-important').checked ? '・重要のみ' : ''}）`;
+  return { q, title };
+}
+
+async function loadDateView() {
+  const { q } = currentQuery();
+  const notes = await api('notes?' + q);
+  $('#date-list').innerHTML = notes.length
+    ? notesHtml(notes, true, 'normal')
+    : '<div class="empty">記録はまだありません。<br>右上の「＋ 記録を書く」から書けます。</div>';
+}
+
+function renderCategoryFilter() {
+  const sel = $('#date-category');
+  const cur = sel.value;
+  sel.innerHTML =
+    '<option value="">すべての種類</option>' + state.categories.map((c) => `<option ${c === cur ? 'selected' : ''}>${esc(c)}</option>`).join('');
 }
 
 function renderPatientButtons() {
-  const kw = $('#patient-search').value.trim().toLowerCase();
-  const list = state.patients.filter((p) => !kw || `${p.name} ${p.kana}`.toLowerCase().replace(/\s/g, '').includes(kw.replace(/\s/g, '')));
+  const kw = $('#patient-search').value.replace(/\s/g, '').toLowerCase();
+  const list = state.patients.filter((p) => !kw || `${p.name}${p.kana}`.replace(/\s/g, '').toLowerCase().includes(kw));
   const box = $('#patient-buttons');
   if (!state.patients.length) {
-    box.innerHTML = '<div class="empty">利用者がまだ登録されていません。「⚙️ 利用者の登録」から追加してください。</div>';
+    box.innerHTML = '<div class="empty">利用者がまだ登録されていません。「⚙️ 利用者の管理」から登録してください。</div>';
     return;
   }
   box.innerHTML =
@@ -171,16 +219,18 @@ function renderPatientButtons() {
           ${esc(p.name)}<small>${esc(p.kana)}${p.room ? '　' + esc(p.room) + '号室' : ''}</small></button>`
       )
       .join('') +
-    `<button class="pbtn ${state.selectedPatient === 'none' ? 'active' : ''}" data-pid="none">全体・共有<small>利用者なしの記録</small></button>`;
-  if (kw && list.length === 1 && state.selectedPatient !== list[0].id) {
-    selectPatient(list[0].id);
-  }
+    (kw ? '' : `<button class="pbtn ${state.selectedPatient === 'none' ? 'active' : ''}" data-pid="none">全体・共有<small>利用者なしの記録</small></button>`);
+  if (kw && list.length === 1 && state.selectedPatient !== list[0].id) selectPatient(list[0].id);
 }
 
 async function loadPatientView() {
+  if (state.selectedPatient && state.selectedPatient !== 'none' && !state.patients.some((p) => p.id === state.selectedPatient)) {
+    state.selectedPatient = null;
+  }
   renderPatientButtons();
   const head = $('#patient-head');
   const listEl = $('#patient-list');
+  $('#patient-toolbar').hidden = !state.selectedPatient;
   if (!state.selectedPatient) {
     head.innerHTML = '';
     listEl.innerHTML = '<div class="empty">上の名前のボタンを押すと、その人の記録だけが表示されます。</div>';
@@ -190,7 +240,7 @@ async function loadPatientView() {
   head.innerHTML = p
     ? `<h2>👤 ${esc(p.name)} 様の記録</h2>${p.memo ? `<div class="patient-memo">📌 ${esc(p.memo)}</div>` : ''}`
     : '<h2>全体・共有の記録</h2>';
-  renderNotes(listEl, await api('notes?patientId=' + encodeURIComponent(state.selectedPatient)), false);
+  listEl.innerHTML = notesHtml(await api('notes?patientId=' + encodeURIComponent(state.selectedPatient)), false, 'normal');
 }
 
 function selectPatient(id) {
@@ -198,51 +248,109 @@ function selectPatient(id) {
   loadPatientView().catch((e) => toast(e.message));
 }
 
-// ---------- 利用者の登録 ----------
+// ---------- 利用者の管理（枠） ----------
 
-function renderManage() {
-  const el = $('#manage-list');
-  el.innerHTML = state.patients.length
-    ? state.patients
-        .map(
-          (p) => `<div class="manage-item">
-            <div><div class="name">${esc(p.name)} 様</div>
-              <div class="sub">${esc(p.kana)}${p.room ? '　' + esc(p.room) + '号室' : ''}${p.memo ? '<br>📌 ' + esc(p.memo) : ''}</div></div>
-            <div class="actions">
-              <button class="btn btn-edit" data-pedit="${p.id}">✏️ 直す</button>
-              <button class="btn btn-del" data-pdel="${p.id}">🗑 消す</button>
-            </div></div>`
-        )
-        .join('')
-    : '<div class="empty">まだ登録されていません。</div>';
+function renderSlots() {
+  $('#slot-count').textContent = state.slots;
+  let html = '';
+  for (let i = 1; i <= state.slots; i++) {
+    const p = state.patients.find((x) => x.slot === i);
+    html += p
+      ? `<div class="slot">
+          <div class="slot-no">No.${i}</div>
+          <div class="name">${esc(p.name)} 様</div>
+          <div class="sub">${esc(p.kana)}${p.room ? '　' + esc(p.room) + '号室' : ''}${p.memo ? '\n📌 ' + esc(p.memo) : ''}</div>
+          <div class="actions">
+            <button class="btn btn-edit" data-pedit="${p.id}">✏️ 編集</button>
+            <button class="btn btn-del" data-pdel="${p.id}">🗑 削除</button>
+          </div></div>`
+      : `<div class="slot empty-slot">
+          <div class="slot-no">No.${i}</div>
+          <div class="slot-empty-label">（空き）</div>
+          <button class="btn btn-add" data-padd="${i}">＋ ここに登録する</button>
+        </div>`;
+  }
+  $('#slot-list').innerHTML = html;
 }
 
-function resetPatientForm() {
+function openPatientForm(p, slot) {
   const f = $('#patient-form');
   f.reset();
-  f.id.value = '';
-  $('#pform-title').textContent = '利用者を追加する';
-  $('#pform-cancel').hidden = true;
+  $('#pform-error').hidden = true;
+  f.id.value = p ? p.id : '';
+  f.slot.value = p ? p.slot : slot;
+  if (p) {
+    f.name.value = p.name;
+    f.kana.value = p.kana;
+    f.room.value = p.room;
+    f.memo.value = p.memo;
+  }
+  $('#pform-title').textContent = p ? `No.${p.slot}　${p.name} 様の情報を編集` : `No.${slot} に新しい利用者を登録`;
+  $('#patient-dialog').showModal();
 }
 
-async function loadPatients() {
-  state.patients = await api('patients');
+// ---------- ゴミ箱 ----------
+
+async function loadTrash() {
+  const t = await api('trash');
+  const el = $('#trash-body');
+  if (!t.patients.length && !t.notes.length) {
+    el.innerHTML = '<div class="empty">ゴミ箱は空です。</div>';
+    return;
+  }
+  const trashedNames = new Map(t.patients.map((p) => [p.id, p.name]));
+  let html = '';
+  if (t.patients.length) {
+    html += '<h2>削除した利用者</h2>';
+    for (const p of t.patients) {
+      const open = state.openTrash === p.id;
+      html += `<div class="trash-item">
+        <div class="row-head">
+          <div><div class="name">${esc(p.name)} 様</div>
+            <div class="sub">削除した日：${jpDateTime(p.deletedAt)}　／　記録 ${p.noteCount} 件</div></div>
+          <div class="actions">
+            ${p.noteCount ? `<button class="btn btn-edit" data-tview="${p.id}">${open ? '▲ 閉じる' : '📖 記録を見る'}</button>` : ''}
+            <button class="btn btn-restore" data-prestore="${p.id}">↩️ 元に戻す</button>
+            <button class="btn btn-del" data-ppurge="${p.id}">完全に消す</button>
+          </div>
+        </div>
+        ${open ? `<div class="trash-notes" id="tnotes-${p.id}">読み込み中…</div>` : ''}
+      </div>`;
+    }
+  }
+  if (t.notes.length) {
+    html += '<h2>消した記録</h2>';
+    for (const n of t.notes) {
+      const name = trashedNames.get(n.patientId) || patientName(n.patientId);
+      html += `<div class="trash-item"><div class="sub">消した日：${jpDateTime(n.deletedAt)}</div>${noteHtml(n, true, 'trash', name)}</div>`;
+    }
+  }
+  html += '<div class="toolbar" style="margin-top:20px"><button class="btn btn-del" id="trash-empty">🗑 ゴミ箱を空にする（完全に消す）</button></div>';
+  el.innerHTML = html;
+  if (state.openTrash && trashedNames.has(state.openTrash)) {
+    const id = state.openTrash;
+    const notes = await api(`notes?trash=1&patientId=${id}`);
+    const box = document.getElementById('tnotes-' + id);
+    if (box) box.innerHTML = notesHtml(notes, false, 'readonly', trashedNames.get(id));
+  }
 }
 
 // ---------- 記録の入力 ----------
 
 function renderFormChoices() {
-  const pBox = $('#nform-patients');
-  pBox.innerHTML =
+  $('#nform-patients').innerHTML =
     state.patients
       .map((p) => `<button type="button" class="choice ${state.form.patientId === p.id ? 'active' : ''}" data-fpid="${p.id}">${esc(p.name)}<small>${esc(p.kana)}</small></button>`)
       .join('') +
     `<button type="button" class="choice ${!state.form.patientId ? 'active' : ''}" data-fpid="">全体・共有<small>特定の人ではない</small></button>`;
-  $('#nform-categories').innerHTML = CATEGORIES.map(
-    (c) =>
-      `<button type="button" class="choice ${state.form.category === c.name ? 'active' : ''}" data-fcat="${c.name}"
-        style="border-color:${c.color};${state.form.category === c.name ? `background:${c.color};color:#fff` : `color:${c.color}`}">${c.name}</button>`
-  ).join('');
+  const cur = $('#note-form').category.value.trim();
+  $('#nform-categories').innerHTML = state.categories
+    .map((c) => {
+      const col = catColor(c);
+      const on = c === cur;
+      return `<button type="button" class="cat-chip ${on ? 'active' : ''}" data-fcat="${esc(c)}" style="color:${col};${on ? `background:${col}` : ''}">${esc(c)}</button>`;
+    })
+    .join('');
   $('#nform-media').innerHTML = mediaHtml(state.form.media, true);
 }
 
@@ -256,10 +364,11 @@ function openNoteForm(note) {
     f.id.value = note.id;
     f.date.value = note.date;
     f.time.value = note.time;
+    f.category.value = note.category;
     f.text.value = note.text;
     f.author.value = note.author;
     f.important.checked = note.important;
-    state.form = { patientId: note.patientId, category: note.category, media: [...note.media] };
+    state.form = { patientId: note.patientId, media: [...note.media] };
   } else {
     $('#nform-title').textContent = '記録を書く';
     f.id.value = '';
@@ -267,7 +376,7 @@ function openNoteForm(note) {
     f.time.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     f.author.value = localStorage.getItem('author') || '';
     const pid = state.view === 'patient' && state.selectedPatient !== 'none' ? state.selectedPatient : null;
-    state.form = { patientId: pid, category: 'その他', media: [] };
+    state.form = { patientId: pid, media: [] };
   }
   renderFormChoices();
   $('#note-dialog').showModal();
@@ -322,7 +431,7 @@ async function saveNote(e) {
     date: f.date.value,
     time: f.time.value,
     patientId: state.form.patientId,
-    category: state.form.category,
+    category: f.category.value,
     text: f.text.value,
     author: f.author.value,
     important: f.important.checked,
@@ -348,10 +457,12 @@ async function refresh() {
   try {
     const v = await api('version');
     state.version = v.version;
-    await loadPatients();
+    [state.patients, state.categories] = await Promise.all([api('patients'), api('categories')]);
+    renderCategoryFilter();
     if (state.view === 'date') await loadDateView();
     else if (state.view === 'patient') await loadPatientView();
-    else renderManage();
+    else if (state.view === 'manage') renderSlots();
+    else await loadTrash();
   } catch (e) {
     toast(e.message);
   }
@@ -366,7 +477,7 @@ function showView(view) {
 
 // 他のパソコンで書かれた記録を自動で反映（入力中は更新しない）
 async function poll() {
-  if (document.hidden || $('#note-dialog').open) return;
+  if (document.hidden || document.querySelector('dialog[open]')) return;
   try {
     const v = await api('version');
     if (v.version !== state.version) refresh();
@@ -397,6 +508,7 @@ $('#date-search').addEventListener('input', () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => loadDateView().catch((e) => toast(e.message)), 300);
 });
+$('#date-category').addEventListener('change', () => loadDateView().catch((e) => toast(e.message)));
 $('#date-important').addEventListener('change', () => loadDateView().catch((e) => toast(e.message)));
 
 $('#patient-search').addEventListener('input', renderPatientButtons);
@@ -405,23 +517,55 @@ $('#patient-buttons').addEventListener('click', (e) => {
   if (b) selectPatient(b.dataset.pid);
 });
 
-// 記録の「直す」「消す」・写真の拡大
+// 印刷・Excel
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-print]')) {
+    $('#print-title').textContent = currentQuery().title;
+    window.print();
+  } else if (e.target.closest('[data-export]')) {
+    const a = document.createElement('a');
+    a.href = '/api/export.csv?' + currentQuery().q;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+});
+
+// 記録の「直す」「消す」・ゴミ箱・写真の拡大
 document.addEventListener('click', async (e) => {
-  const edit = e.target.closest('[data-edit]');
-  const del = e.target.closest('[data-del]');
-  const media = e.target.closest('.media-item');
-  if (edit) {
-    try { openNoteForm(await api('notes/' + edit.dataset.edit)); } catch (err) { toast(err.message); }
-  } else if (del) {
-    if (!confirm('この記録を消しますか？\n（元に戻せません）')) return;
+  const t = (sel) => e.target.closest(sel);
+  const run = async (fn, msg) => {
     try {
-      await api('notes/' + del.dataset.del, { method: 'DELETE' });
-      toast('消しました');
+      await fn();
+      if (msg) toast(msg);
       refresh();
-    } catch (err) { toast(err.message); }
-  } else if (media && !e.target.closest('[data-remove]')) {
-    const src = media.dataset.src;
-    $('#viewer-body').innerHTML = media.dataset.type === 'video'
+    } catch (err) {
+      toast(err.message);
+    }
+  };
+  let b;
+  if ((b = t('[data-edit]'))) {
+    try { openNoteForm(await api('notes/' + b.dataset.edit)); } catch (err) { toast(err.message); }
+  } else if ((b = t('[data-del]'))) {
+    if (confirm('この記録をゴミ箱に移しますか？\n（ゴミ箱から元に戻せます）')) run(() => api('notes/' + b.dataset.del, { method: 'DELETE' }), 'ゴミ箱に移しました');
+  } else if ((b = t('[data-nrestore]'))) {
+    run(() => api(`notes/${b.dataset.nrestore}/restore`, { method: 'POST' }), '元に戻しました ✅');
+  } else if ((b = t('[data-npurge]'))) {
+    if (confirm('この記録を完全に消しますか？\n二度と元に戻せません。')) run(() => api(`notes/${b.dataset.npurge}/purge`, { method: 'DELETE' }), '完全に消しました');
+  } else if ((b = t('[data-prestore]'))) {
+    run(() => api(`patients/${b.dataset.prestore}/restore`, { method: 'POST' }), '元に戻しました ✅');
+  } else if ((b = t('[data-ppurge]'))) {
+    if (confirm('この方の情報と記録をすべて完全に消しますか？\n二度と元に戻せません。')) {
+      run(() => api(`patients/${b.dataset.ppurge}/purge`, { method: 'DELETE' }), '完全に消しました');
+    }
+  } else if ((b = t('[data-tview]'))) {
+    state.openTrash = state.openTrash === b.dataset.tview ? null : b.dataset.tview;
+    loadTrash().catch((err) => toast(err.message));
+  } else if (t('#trash-empty')) {
+    if (confirm('ゴミ箱の中身をすべて完全に消しますか？\n二度と元に戻せません。')) run(() => api('trash', { method: 'DELETE' }), 'ゴミ箱を空にしました');
+  } else if ((b = t('.media-item')) && !t('[data-remove]')) {
+    const src = b.dataset.src;
+    $('#viewer-body').innerHTML = b.dataset.type === 'video'
       ? `<video src="${src}" controls autoplay playsinline></video>`
       : `<img src="${src}" alt="">`;
     $('#viewer').showModal();
@@ -439,12 +583,13 @@ $('#nform-files').addEventListener('change', (e) => {
   e.target.value = '';
   if (files.length) addFiles(files);
 });
+$('#note-form').category.addEventListener('input', renderFormChoices);
 $('#note-form').addEventListener('click', (e) => {
   const p = e.target.closest('[data-fpid]');
   const c = e.target.closest('[data-fcat]');
   const r = e.target.closest('[data-remove]');
   if (p) state.form.patientId = p.dataset.fpid || null;
-  else if (c) state.form.category = c.dataset.fcat;
+  else if (c) $('#note-form').category.value = c.dataset.fcat;
   else if (r) {
     e.preventDefault();
     e.stopPropagation();
@@ -453,51 +598,50 @@ $('#note-form').addEventListener('click', (e) => {
   renderFormChoices();
 });
 
-// 利用者フォーム
+// 利用者の管理
+$('#slot-list').addEventListener('click', (e) => {
+  const add = e.target.closest('[data-padd]');
+  const edit = e.target.closest('[data-pedit]');
+  const del = e.target.closest('[data-pdel]');
+  if (add) openPatientForm(null, Number(add.dataset.padd));
+  else if (edit) openPatientForm(state.patients.find((x) => x.id === edit.dataset.pedit));
+  else if (del) {
+    const p = state.patients.find((x) => x.id === del.dataset.pdel);
+    if (!confirm(`${p.name} 様を削除しますか？\n\n・この枠は「空き」になり、新しい方を登録できます\n・記録はゴミ箱に移り、あとから元に戻せます`)) return;
+    api('patients/' + p.id, { method: 'DELETE' })
+      .then(() => {
+        if (state.selectedPatient === p.id) state.selectedPatient = null;
+        toast('削除しました（ゴミ箱に移しました）');
+        refresh();
+      })
+      .catch((err) => toast(err.message));
+  }
+});
 $('#patient-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = e.target;
-  const body = { name: f.name.value, kana: f.kana.value, room: f.room.value, memo: f.memo.value };
+  const body = { name: f.name.value, kana: f.kana.value, room: f.room.value, memo: f.memo.value, slot: Number(f.slot.value) };
   try {
     if (f.id.value) await api('patients/' + f.id.value, { method: 'PUT', body });
     else await api('patients', { method: 'POST', body });
+    $('#patient-dialog').close();
     toast('保存しました ✅');
-    resetPatientForm();
     refresh();
-  } catch (err) { toast(err.message); }
-});
-$('#pform-cancel').addEventListener('click', resetPatientForm);
-$('#manage-list').addEventListener('click', async (e) => {
-  const edit = e.target.closest('[data-pedit]');
-  const del = e.target.closest('[data-pdel]');
-  if (edit) {
-    const p = state.patients.find((x) => x.id === edit.dataset.pedit);
-    const f = $('#patient-form');
-    f.id.value = p.id;
-    f.name.value = p.name;
-    f.kana.value = p.kana;
-    f.room.value = p.room;
-    f.memo.value = p.memo;
-    $('#pform-title').textContent = `${p.name} 様の情報を直す`;
-    $('#pform-cancel').hidden = false;
-    f.scrollIntoView({ behavior: 'smooth' });
-  } else if (del) {
-    const p = state.patients.find((x) => x.id === del.dataset.pdel);
-    if (!confirm(`${p.name} 様を消しますか？`)) return;
-    try {
-      await api('patients/' + p.id, { method: 'DELETE' });
-      if (state.selectedPatient === p.id) state.selectedPatient = null;
-      toast('消しました');
-      refresh();
-    } catch (err) { toast(err.message); }
+  } catch (err) {
+    const el = $('#pform-error');
+    el.textContent = err.message;
+    el.hidden = false;
   }
 });
+$('#pform-cancel').addEventListener('click', () => $('#patient-dialog').close());
 
 // 他の端末からの接続先を表示
 api('info')
   .then((info) => {
+    state.slots = info.slots;
+    if (state.view === 'manage') renderSlots();
     const urls = info.addresses.map((ip) => `<code>http://${ip}:${info.port}</code>`).join('<br>');
-    $('#server-info').innerHTML = `💻 ほかのパソコン・タブレットからは、同じWi-Fiにつないで次のアドレスを開いてください：<br>${urls || '（ネットワークが見つかりません）'}`;
+    $('#server-info').innerHTML = `💻 ほかのパソコン・タブレットからは、同じネットワークにつないで次のアドレスを開いてください：<br>${urls || '（ネットワークが見つかりません）'}`;
   })
   .catch(() => {});
 

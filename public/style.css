@@ -42,7 +42,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   padding: 12px 16px 0;
   max-width: 1000px;
@@ -84,6 +84,42 @@ main { max-width: 1000px; margin: 0 auto; padding: 16px; }
 .btn-edit { background: var(--blue); min-height: 44px; padding: 6px 16px; font-size: 1rem; }
 .btn-del { background: var(--red); min-height: 44px; padding: 6px 16px; font-size: 1rem; }
 .btn-media { background: #6a1b9a; }
+.btn-print { background: #455a64; }
+.btn-excel { background: #1b5e20; }
+.btn-restore { background: var(--blue); min-height: 44px; padding: 6px 16px; font-size: 1rem; }
+.btn-add { background: var(--green); width: 100%; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-bottom: 12px; }
+.hint { background: #fff8e1; border-left: 8px solid #f9a825; border-radius: 6px; padding: 10px 14px; margin-top: 0; }
+.print-only { display: none; }
+
+.slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.slot {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--card); border: 2px solid var(--green); border-radius: var(--radius); padding: 12px 14px;
+}
+.slot.empty-slot { border: 2px dashed var(--line); background: #fafafa; }
+.slot-no { font-weight: bold; color: var(--muted); }
+.slot .name { font-size: 1.3rem; font-weight: bold; }
+.slot .sub { color: var(--muted); white-space: pre-wrap; }
+.slot .actions { margin-top: auto; }
+.slot-empty-label { font-size: 1.2rem; color: var(--muted); font-weight: bold; }
+
+.cat-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.cat-chip {
+  min-height: 46px; padding: 6px 16px; border-radius: 999px; border: 2px solid currentColor;
+  background: #fff; font-weight: bold; cursor: pointer;
+}
+.cat-chip.active { color: #fff !important; }
+
+.trash-item {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 10px;
+}
+.trash-item .row-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.trash-item .name { font-size: 1.2rem; font-weight: bold; }
+.trash-item .sub { color: var(--muted); }
+.trash-notes { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
 
 .filters, .card {
   background: var(--card);
@@ -231,10 +267,22 @@ dialog h2 { margin: 0; }
   :root { font-size: 17px; }
   .topbar h1 { font-size: 1.2rem; }
   .btn-new { padding: 8px 14px; font-size: 1.05rem; }
-  .tab { font-size: .95rem; padding: 12px 4px; }
+  .tabs { grid-template-columns: repeat(2, 1fr); }
+  .tab { font-size: .95rem; padding: 12px 4px; border-radius: var(--radius); }
   .media-item { width: 96px; height: 96px; }
 }
 
 @media print {
-  .topbar, .tabs, .filters, .note-foot .actions { display: none; }
+  :root { font-size: 12pt; }
+  body { background: #fff; }
+  .topbar, .tabs, .filters, .toolbar, .hint, .note-foot .actions, #patient-buttons, dialog, .toast { display: none !important; }
+  .print-only { display: block; }
+  #patient-head h2 { display: none; }
+  main { max-width: none; padding: 0; }
+  .note { break-inside: avoid; border: 1px solid #999; }
+  .note.important { background: #fff; border: 2px solid #000; }
+  .tag { color: #000 !important; background: #fff !important; border: 1px solid #000; }
+  .day-head { background: #fff; border-left: 6px solid #000; }
+  .media-item { width: 90px; height: 90px; background: #fff; }
+  .media-item .play { color: #000; text-shadow: none; }
 }
