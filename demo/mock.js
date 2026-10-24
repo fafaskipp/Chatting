@@ -7,7 +7,6 @@
   const z = (n) => String(n).padStart(2, '0');
   const localDate = (d = new Date()) => `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
   const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return localDate(d); };
-  const monthAgo = (n) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - n); return localDate(d).slice(0, 7); };
   const now = () => new Date().toISOString();
 
   function sample() {
@@ -30,35 +29,14 @@
       [12, '11:00', 'p5', 'ヒヤリ・事故', '食堂で立ち上がる時にふらつき。転倒なし。', true, '佐々木'],
       [40, '10:00', 'p1', '体調', '食欲低下。昼食 半量。', true, 'グエン'],
       [45, '02:10', 'p3', 'ヒヤリ・事故', '夜間 ベッドから立ち上がろうとしてふらつき。職員が支えて転倒なし。', true, 'グエン'],
+      [50, '12:10', 'p2', 'ヒヤリ・事故', '昼食中にむせ込み。背中をさすって落ち着いた。', true, '佐々木'],
+      [52, '09:30', 'p5', '服薬・薬', '朝の薬を飲み忘れそうになった。声かけで服用。', false, 'グエン'],
     ];
     const notes = rows.map(([ago, time, patientId, category, text, important, author], i) => ({
       id: 'n' + i, date: daysAgo(ago), time, patientId, category, text, important, author, media: [],
       createdAt: now(), updatedAt: now(),
     }));
-    const item = (trend, text = '') => ({ trend, text });
-    const reports = [
-      {
-        id: 'r1', month: monthAgo(1), patientId: 'p1',
-        items: {
-          health: item('down', '月の前半に食欲低下あり。'), meal: item('down', '半量の日が多かった。'),
-          excretion: item('same'), sleep: item('same'), adl: item('same', '歩行は見守りで安定。'), mood: item('same', '表情はおだやか。'),
-        },
-        incidentReview: '', incidentPlan: '', summary: '食事量の低下に注意。来月は好きなおかずを増やして様子を見る。',
-        author: '佐々木', createdAt: now(), updatedAt: now(),
-      },
-      {
-        id: 'r2', month: monthAgo(1), patientId: 'p3',
-        items: {
-          health: item('same'), meal: item('same'), excretion: item('same', '夜間トイレ 2〜3回。'),
-          sleep: item('down', '夜中に目が覚めることが増えた。'), adl: item('down', '立ち上がりでふらつきあり。'), mood: item('same'),
-        },
-        incidentReview: '夜間トイレに行こうとして、暗い中で一人で立ち上がった。',
-        incidentPlan: '足元灯をつける。夜間の見回りを 2時・4時 に増やす。',
-        summary: '夜間の転倒に注意。来月は夜の様子を重点的に見る。',
-        author: 'グエン', createdAt: now(), updatedAt: now(),
-      },
-    ];
-    return { patients, notes, reports, media: {}, version: 1 };
+    return { patients, notes, media: {}, version: 1 };
   }
 
   function load() {

@@ -16,7 +16,7 @@
     <button class="tab active" data-view="date" role="tab"><span class="ic">📅</span><span class="lb">日付で見る</span><span class="lb-s">日付</span></button>
     <button class="tab" data-view="patient" role="tab"><span class="ic">👤</span><span class="lb">利用者で見る</span><span class="lb-s">利用者</span></button>
     <button class="tab" data-view="report" role="tab"><span class="ic">📝</span><span class="lb">月間評価</span><span class="lb-s">評価</span></button>
-    <button class="tab" data-view="summary" role="tab"><span class="ic">📊</span><span class="lb">年間まとめ</span><span class="lb-s">まとめ</span></button>
+    <button class="tab" data-view="summary" role="tab"><span class="ic">📊</span><span class="lb">月間まとめ</span><span class="lb-s">まとめ</span></button>
     <button class="tab" data-view="manage" role="tab"><span class="ic">⚙️</span><span class="lb">利用者の管理</span><span class="lb-s">管理</span></button>
     <button class="tab" data-view="trash" role="tab"><span class="ic">🗑</span><span class="lb">ゴミ箱</span><span class="lb-s">ゴミ箱</span></button>
   </nav>
@@ -65,34 +65,31 @@
       <div id="patient-list" class="list"></div>
     </section>
 
-    <!-- 月間評価 -->
+    <!-- 月間評価（見るだけ） -->
     <section id="view-report" class="view" hidden>
-      <div id="rep-main">
-        <div class="filters">
-          <div class="month-nav">
-            <button type="button" class="btn btn-gray" id="rep-prev" aria-label="前の月">◀ 前の月</button>
-            <h2 id="rep-month-label"></h2>
-            <button type="button" class="btn btn-gray" id="rep-next" aria-label="次の月">次の月 ▶</button>
-          </div>
-          <p class="sub-hint">名前を押すと、その月の評価を書いたり見たりできます。ヒヤリ・事故の件数は、日々の記録から自動で数えます。</p>
+      <div class="filters">
+        <div class="month-nav">
+          <button type="button" class="btn btn-gray" data-month="-1">◀ 前の月</button>
+          <h2 class="month-label"></h2>
+          <button type="button" class="btn btn-gray" data-month="1">次の月 ▶</button>
         </div>
-        <div id="rep-overview" class="slot-grid"></div>
-        <h2>📚 これまでの評価</h2>
-        <div class="filters">
-          <label>利用者 <select id="rep-filter"></select></label>
-        </div>
-        <div id="rep-history"></div>
+        <p class="sub-hint">この月に起きたことを、利用者ごとに表示します。日々の記録から自動で集めるので、入力はいりません。</p>
       </div>
-      <div id="rep-detail" hidden></div>
+      <div class="toolbar">
+        <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
+      </div>
+      <div id="rep-body"></div>
     </section>
 
-    <!-- 年間まとめ -->
+    <!-- 月間まとめ -->
     <section id="view-summary" class="view" hidden>
       <div class="filters">
-        <div class="row">
-          <label>年 <select id="sum-year"></select></label>
-          <label>利用者 <select id="sum-patient"></select></label>
+        <div class="month-nav">
+          <button type="button" class="btn btn-gray" data-month="-1">◀ 前の月</button>
+          <h2 class="month-label"></h2>
+          <button type="button" class="btn btn-gray" data-month="1">次の月 ▶</button>
         </div>
+        <label style="margin-top:10px">利用者 <select id="sum-patient"></select></label>
       </div>
       <div class="toolbar">
         <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
@@ -155,28 +152,6 @@
       <div class="actions">
         <button type="submit" class="btn btn-save" id="nform-save">💾 保存する</button>
         <button type="button" class="btn btn-gray" id="nform-cancel">やめる</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- 月間評価の入力 -->
-  <dialog id="report-dialog">
-    <form id="report-form" class="form" method="dialog">
-      <h2 id="rform-title" tabindex="-1" autofocus>月間評価</h2>
-      <p class="sub-hint">それぞれ先月とくらべて、いちばん近いものを押してください。メモは書ける分だけで大丈夫です。</p>
-      <div id="rform-areas" class="form"></div>
-      <fieldset>
-        <legend>⚠️ この月のヒヤリ・事故</legend>
-        <div id="rform-incidents"></div>
-        <label>ふり返り（原因・そのときの様子）<textarea name="incidentReview" rows="3" placeholder="例：夜間トイレに行くとき、暗くて足元が見えにくかった"></textarea></label>
-        <label>これからの対策<textarea name="incidentPlan" rows="3" placeholder="例：足元灯をつける。夜間の見回りを 2時・4時 に増やす"></textarea></label>
-      </fieldset>
-      <label>まとめ・来月の目標<textarea name="summary" rows="4" placeholder="例：食事量は安定。来月は歩行の見守りを続ける"></textarea></label>
-      <label>記入者<input name="author" maxlength="30" placeholder="あなたの名前"></label>
-      <p id="rform-error" class="error" hidden></p>
-      <div class="actions">
-        <button type="submit" class="btn btn-save">💾 保存する</button>
-        <button type="button" class="btn btn-gray" id="rform-cancel">やめる</button>
       </div>
     </form>
   </dialog>
