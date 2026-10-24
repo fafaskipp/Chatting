@@ -32,6 +32,9 @@ const state = {
   form: { patientId: null, media: [] },
   uploading: 0,
   openTrash: null,
+  reportMonth: ymd(new Date()).slice(0, 7),
+  reportOpen: null, // 開いている月間評価 { patientId, month }
+  reportCtx: null,
   lists: { date: { key: '', count: PAGE }, patient: { key: '', count: PAGE } },
 };
 
@@ -277,6 +280,235 @@ function selectPatient(id) {
   loadPatientView().catch((e) => toast(e.message));
 }
 
+// ---------- 月間評価 ----------
+
+const AREAS = [
+  ['health', '体調', '熱・血圧・病気・痛み'],
+  ['meal', '食事・水分', '食べる量・飲む量・むせ'],
+  ['excretion', '排泄', 'トイレ・便秘・失禁'],
+  ['sleep', '睡眠', '夜の様子・昼寝'],
+  ['adl', '動き・生活動作', '歩く・立つ・着替え・入浴'],
+  ['mood', '気持ち・表情', '笑顔・不安・物忘れ'],
+];
+const TREND_LABEL = { up: '◎ 良くなった', same: '○ 変わらない', down: '△ 悪くなった' };
+const TREND_MARK = { up: '◎', same: '○', down: '△' };
+
+function thisMonth() {
+  return ymd(new Date()).slice(0, 7);
+}
+
+function jpMonth(m) {
+  const [y, mm] = m.split('-').map(Number);
+  return `${y}年${mm}月`;
+}
+
+function shiftMonth(m, d) {
+  const [y, mm] = m.split('-').map(Number);
+  return ymd(new Date(y, mm - 1 + d, 1)).slice(0, 7);
+}
+
+function trendHtml(t) {
+  return t ? `<span class="trend trend-${t}">${TREND_LABEL[t]}</span>` : '<span class="trend trend-none">－</span>';
+}
+
+function incidentChip(count) {
+  return count
+    ? `<span class="chip chip-inc">⚠️ ヒヤリ・事故 ${count}件</span>`
+    : '<span class="chip chip-zero">ヒヤリ・事故 0件</span>';
+}
+
+function miniNoteHtml(n) {
+  return `<div class="mini-note" style="border-color:${catColor(n.category)}">
+    <span class="when">${esc(jpDate(n.date, false))} ${esc(n.time)}</span>
+    <span class="tag" style="background:${catColor(n.category)}">${esc(n.category)}</span>
+    ${n.text ? `<div class="text">${esc(n.text)}</div>` : ''}
+  </div>`;
+}
+
+async function loadReports() {
+  if (state.reportOpen) return loadReportDetail();
+  $('#rep-main').hidden = false;
+  $('#rep-detail').hidden = true;
+  $('#rep-month-label').textContent = jpMonth(state.reportMonth);
+  $('#rep-next').disabled = state.reportMonth >= thisMonth();
+
+  const sel = $('#rep-filter');
+  const cur = sel.value;
+  sel.innerHTML =
+    '<option value="">全員</option>' +
+    state.patients.map((p) => `<option value="${p.id}" ${p.id === cur ? 'selected' : ''}>${esc(p.name)} 様</option>`).join('');
+
+  const [overview, history] = await Promise.all([
+    api('reports/overview?month=' + state.reportMonth),
+    api('reports?patientId=' + encodeURIComponent(sel.value)),
+  ]);
+
+  $('#rep-overview').innerHTML = overview.length
+    ? overview
+        .map(
+          (o) => `<div class="slot ${o.reportId ? '' : 'empty-slot'}">
+            <div class="name">${esc(o.patient.name)} 様</div>
+            <div class="chips">
+              ${o.reportId ? '<span class="chip chip-done">✅ 評価済み</span>' : '<span class="chip chip-todo">まだ書いていません</span>'}
+              ${incidentChip(o.incidentCount)}
+              <span class="chip chip-zero">記録 ${o.noteCount}件</span>
+            </div>
+            <div class="actions">
+              ${o.reportId
+                ? `<button class="btn btn-edit" data-ropen="${o.patient.id}">📖 見る・直す</button>`
+                : `<button class="btn btn-add" data-rwrite="${o.patient.id}">📝 評価を書く</button>`}
+            </div>
+          </div>`
+        )
+        .join('')
+    : '<div class="empty">利用者がまだ登録されていません。「⚙️ 利用者の管理」から登録してください。</div>';
+
+  $('#rep-history').innerHTML = history.length
+    ? history
+        .map(
+          (r) => `<div class="history-item">
+            <div>
+              <div class="name">${jpMonth(r.month)}　${esc(patientName(r.patientId))} 様</div>
+              <div class="icons">${AREAS.map(([k, label]) => {
+                const t = r.items[k] && r.items[k].trend;
+                return `<span class="trend ${t ? 'trend-' + t : 'trend-none'}">${label.split('・')[0]} ${t ? TREND_MARK[t] : '－'}</span>`;
+              }).join('')}</div>
+            </div>
+            <div class="chips">${incidentChip(r.incidentCount)}</div>
+            <button class="btn btn-edit" data-rhist="${r.patientId}|${r.month}">📖 開く</button>
+          </div>`
+        )
+        .join('')
+    : '<div class="empty">まだ評価はありません。</div>';
+}
+
+function openReport(patientId, month) {
+  state.reportOpen = { patientId, month };
+  return loadReportDetail();
+}
+
+async function loadReportDetail() {
+  const { patientId, month } = state.reportOpen;
+  const p = state.patients.find((x) => x.id === patientId);
+  if (!p) {
+    state.reportOpen = null;
+    return loadReports();
+  }
+  const ctx = await api(`reports/context?patientId=${encodeURIComponent(patientId)}&month=${month}`);
+  state.reportCtx = ctx;
+  const r = ctx.report;
+  $('#rep-main').hidden = true;
+  const el = $('#rep-detail');
+  el.hidden = false;
+
+  let html = `<div class="toolbar no-print" style="justify-content:space-between">
+      <button class="btn btn-gray" data-rback>← 一覧に戻る</button>
+      <span class="actions">
+        ${r ? '<button class="btn btn-edit" data-redit>✏️ 直す</button>' : '<button class="btn btn-add" data-redit>📝 評価を書く</button>'}
+        ${r ? '<button class="btn btn-print" data-print>🖨 印刷・PDF</button>' : ''}
+        ${r ? '<button class="btn btn-del" data-rdel>🗑 消す</button>' : ''}
+      </span>
+    </div>
+    <div class="month-nav no-print" style="margin-bottom:12px">
+      <button class="btn btn-gray" data-rshift="-1">◀ 前の月</button>
+      <span></span>
+      <button class="btn btn-gray" data-rshift="1" ${month >= thisMonth() ? 'disabled' : ''}>次の月 ▶</button>
+    </div>
+    <h2>📝 ${jpMonth(month)}　${esc(p.name)} 様の月間評価</h2>`;
+
+  if (r) {
+    html += `<p class="sub-hint">記入：${esc(r.author) || '－'}　／　最後に直した日：${jpDateTime(r.updatedAt)}</p>
+      <div class="table-wrap"><table class="rep-table">
+        <thead><tr><th>項目</th><th>今月</th><th>先月</th><th>メモ</th></tr></thead>
+        <tbody>${AREAS.map(([k, label]) => {
+          const it = r.items[k] || {};
+          const prev = ctx.prev && ctx.prev.items[k] ? ctx.prev.items[k].trend : '';
+          return `<tr><th>${label}</th><td>${trendHtml(it.trend)}</td><td>${trendHtml(prev)}</td><td class="memo">${esc(it.text) || ''}</td></tr>`;
+        }).join('')}</tbody>
+      </table></div>`;
+  } else {
+    html += `<div class="empty" style="margin-bottom:16px">この月の評価はまだありません。<br>「📝 評価を書く」から書けます。</div>`;
+  }
+
+  html += `<div class="rep-block ${ctx.incidents.length ? 'danger' : ''}">
+      <h3>⚠️ ヒヤリ・事故（${ctx.incidents.length}件）</h3>
+      ${ctx.incidents.length ? ctx.incidents.map(miniNoteHtml).join('') : '<p class="sub-hint">この月の記録にヒヤリ・事故はありません。</p>'}
+      ${r && r.incidentReview ? `<h3 style="margin-top:12px">ふり返り</h3><div class="text">${esc(r.incidentReview)}</div>` : ''}
+      ${r && r.incidentPlan ? `<h3 style="margin-top:12px">これからの対策</h3><div class="text">${esc(r.incidentPlan)}</div>` : ''}
+    </div>`;
+  if (ctx.important.length) {
+    html += `<div class="rep-block"><h3>⭐ この月の重要な記録（${ctx.important.length}件）</h3>${ctx.important.map(miniNoteHtml).join('')}</div>`;
+  }
+  if (r && r.summary) {
+    html += `<div class="rep-block"><h3>まとめ・来月の目標</h3><div class="text">${esc(r.summary)}</div></div>`;
+  }
+  html += `<p class="sub-hint">この月の記録：${ctx.noteCount}件</p>`;
+  el.innerHTML = html;
+}
+
+function openReportForm() {
+  const { patientId, month } = state.reportOpen;
+  const ctx = state.reportCtx;
+  const r = ctx.report;
+  const f = $('#report-form');
+  f.reset();
+  $('#rform-error').hidden = true;
+  $('#rform-title').textContent = `${jpMonth(month)}　${patientName(patientId)} 様の月間評価`;
+  f.incidentReview.value = r ? r.incidentReview : '';
+  f.incidentPlan.value = r ? r.incidentPlan : '';
+  f.summary.value = r ? r.summary : '';
+  f.author.value = r ? r.author : localStorage.getItem('author') || '';
+  $('#rform-areas').innerHTML = AREAS.map(([k, label, hint]) => {
+    const it = (r && r.items[k]) || {};
+    const prev = ctx.prev && ctx.prev.items[k] ? ctx.prev.items[k].trend : '';
+    return `<div class="area" data-area="${k}">
+      <div class="area-head"><b>${label}</b><span class="area-prev">先月：${prev ? TREND_LABEL[prev] : 'なし'}</span></div>
+      <small class="muted">${hint}</small>
+      <div class="trend-btns">${['up', 'same', 'down']
+        .map((t) => `<button type="button" class="trend-btn ${it.trend === t ? 'active' : ''}" data-t="${t}">${TREND_LABEL[t]}</button>`)
+        .join('')}</div>
+      <textarea rows="2" placeholder="メモ（例：${hint.split('・')[0]}について気づいたこと）">${esc(it.text || '')}</textarea>
+    </div>`;
+  }).join('');
+  $('#rform-incidents').innerHTML = ctx.incidents.length
+    ? `<p class="sub-hint">日々の記録から見つけたヒヤリ・事故（${ctx.incidents.length}件）：</p>${ctx.incidents.map(miniNoteHtml).join('')}`
+    : '<p class="sub-hint">この月の記録にヒヤリ・事故はありません。</p>';
+  $('#report-dialog').showModal();
+}
+
+async function saveReport(e) {
+  e.preventDefault();
+  const f = $('#report-form');
+  const { patientId, month } = state.reportOpen;
+  const items = {};
+  for (const area of $$('#rform-areas .area')) {
+    const active = area.querySelector('.trend-btn.active');
+    items[area.dataset.area] = { trend: active ? active.dataset.t : '', text: area.querySelector('textarea').value };
+  }
+  const body = {
+    month,
+    patientId,
+    items,
+    incidentReview: f.incidentReview.value,
+    incidentPlan: f.incidentPlan.value,
+    summary: f.summary.value,
+    author: f.author.value,
+  };
+  localStorage.setItem('author', body.author);
+  try {
+    const r = state.reportCtx.report;
+    if (r) await api('reports/' + r.id, { method: 'PUT', body });
+    else await api('reports', { method: 'POST', body });
+    $('#report-dialog').close();
+    toast('保存しました ✅');
+    refresh();
+  } catch (err) {
+    const el = $('#rform-error');
+    el.textContent = err.message;
+    el.hidden = false;
+  }
+}
+
 // ---------- 年間まとめ ----------
 
 function barsHtml(title, rows, colorOf) {
@@ -376,7 +608,7 @@ function daysLeft(iso) {
 async function loadTrash() {
   const t = await api('trash');
   const el = $('#trash-body');
-  if (!t.patients.length && !t.notes.length) {
+  if (!t.patients.length && !t.notes.length && !t.reports.length) {
     el.innerHTML = '<div class="empty">ゴミ箱は空です。</div>';
     return;
   }
@@ -389,7 +621,7 @@ async function loadTrash() {
       html += `<div class="trash-item">
         <div class="row-head">
           <div><div class="name">${esc(p.name)} 様</div>
-            <div class="sub">削除した日：${jpDateTime(p.deletedAt)}　／　記録 ${p.noteCount} 件</div>
+            <div class="sub">削除した日：${jpDateTime(p.deletedAt)}　／　記録 ${p.noteCount} 件${p.reportCount ? `・月間評価 ${p.reportCount} 件` : ''}</div>
             <div class="sub">${daysLeft(p.expiresAt)}</div></div>
           <div class="actions">
             ${p.noteCount ? `<button class="btn btn-edit" data-tview="${p.id}">${open ? '▲ 閉じる' : '📖 記録を見る'}</button>` : ''}
@@ -406,6 +638,20 @@ async function loadTrash() {
     for (const n of t.notes) {
       const name = trashedNames.get(n.patientId) || patientName(n.patientId);
       html += `<div class="trash-item"><div class="sub">消した日：${jpDateTime(n.deletedAt)}　／　${daysLeft(n.expiresAt)}</div>${noteHtml(n, true, 'trash', name)}</div>`;
+    }
+  }
+  if (t.reports.length) {
+    html += '<h2>消した月間評価</h2>';
+    for (const r of t.reports) {
+      const name = trashedNames.get(r.patientId) || patientName(r.patientId);
+      html += `<div class="trash-item"><div class="row-head">
+          <div><div class="name">${jpMonth(r.month)}　${esc(name)} 様の月間評価</div>
+            <div class="sub">消した日：${jpDateTime(r.deletedAt)}　／　${daysLeft(r.expiresAt)}</div></div>
+          <div class="actions">
+            <button class="btn btn-restore" data-rrestore="${r.id}">↩️ 元に戻す</button>
+            <button class="btn btn-del" data-rpurge="${r.id}">完全に消す</button>
+          </div>
+        </div></div>`;
     }
   }
   el.innerHTML = html;
@@ -563,6 +809,7 @@ async function refresh() {
     if (state.view === 'date') await loadDateView();
     else if (state.view === 'patient') await loadPatientView();
     else if (state.view === 'summary') await loadSummary();
+    else if (state.view === 'report') await loadReports();
     else if (state.view === 'manage') renderSlots();
     else await loadTrash();
   } catch (e) {
@@ -621,10 +868,75 @@ $('#patient-buttons').addEventListener('click', (e) => {
   if (b) selectPatient(b.dataset.pid);
 });
 
+// 月間評価
+$('#rep-prev').addEventListener('click', () => {
+  state.reportMonth = shiftMonth(state.reportMonth, -1);
+  loadReports().catch((e) => toast(e.message));
+});
+$('#rep-next').addEventListener('click', () => {
+  state.reportMonth = shiftMonth(state.reportMonth, 1);
+  loadReports().catch((e) => toast(e.message));
+});
+$('#rep-filter').addEventListener('change', () => loadReports().catch((e) => toast(e.message)));
+document.addEventListener('click', async (e) => {
+  const t = (sel) => e.target.closest(sel);
+  let b;
+  try {
+    if ((b = t('[data-ropen]'))) await openReport(b.dataset.ropen, state.reportMonth);
+    else if ((b = t('[data-rwrite]'))) {
+      await openReport(b.dataset.rwrite, state.reportMonth);
+      openReportForm();
+    } else if ((b = t('[data-rhist]'))) {
+      const [pid, month] = b.dataset.rhist.split('|');
+      state.reportMonth = month;
+      await openReport(pid, month);
+      window.scrollTo(0, 0);
+    } else if (t('[data-rback]')) {
+      state.reportOpen = null;
+      await loadReports();
+    } else if (t('[data-redit]')) openReportForm();
+    else if ((b = t('[data-rshift]'))) {
+      const month = shiftMonth(state.reportOpen.month, Number(b.dataset.rshift));
+      if (month > thisMonth()) return;
+      state.reportMonth = month;
+      await openReport(state.reportOpen.patientId, month);
+    } else if (t('[data-rdel]')) {
+      if (!(await askConfirm('この月間評価をゴミ箱に移しますか？\n（ゴミ箱から元に戻せます）'))) return;
+      await api('reports/' + state.reportCtx.report.id, { method: 'DELETE' });
+      state.reportOpen = null;
+      toast('ゴミ箱に移しました');
+      refresh();
+    } else if ((b = t('[data-rrestore]'))) {
+      await api(`reports/${b.dataset.rrestore}/restore`, { method: 'POST' });
+      toast('元に戻しました ✅');
+      refresh();
+    } else if ((b = t('[data-rpurge]'))) {
+      if (!(await askConfirm('この月間評価を完全に消しますか？\n二度と元に戻せません。'))) return;
+      await api(`reports/${b.dataset.rpurge}/purge`, { method: 'DELETE' });
+      toast('完全に消しました');
+      refresh();
+    }
+  } catch (err) {
+    toast(err.message);
+  }
+});
+$('#report-form').addEventListener('submit', saveReport);
+$('#rform-cancel').addEventListener('click', () => $('#report-dialog').close());
+// もう一度押すと選択を外せる
+$('#rform-areas').addEventListener('click', (e) => {
+  const btn = e.target.closest('.trend-btn');
+  if (!btn) return;
+  const was = btn.classList.contains('active');
+  btn.parentElement.querySelectorAll('.trend-btn').forEach((x) => x.classList.remove('active'));
+  if (!was) btn.classList.add('active');
+});
+
 // 印刷：「もっと見る」で隠れている記録もすべて読み込んでから印刷する
 async function printView() {
   if (state.view === 'summary') {
     $('#print-title').textContent = summaryTitle();
+  } else if (state.view === 'report') {
+    $('#print-title').textContent = '';
   } else {
     $('#print-title').textContent = currentQuery().title;
     const list = state.lists[state.view];

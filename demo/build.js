@@ -8,7 +8,7 @@ const read = (f) => fs.readFileSync(path.join(repo, 'public', f), 'utf8');
 const html = read('index.html');
 const css = read('style.css');
 let app = read('app.js');
-const mock = fs.readFileSync(path.join(__dirname, 'mock.js'), 'utf8');
+const mock = fs.readFileSync(path.join(repo, 'lib', 'store.js'), 'utf8') + '\n' + fs.readFileSync(path.join(__dirname, 'mock.js'), 'utf8');
 
 const swap = (from, to) => {
   if (!app.includes(from)) throw new Error('not found: ' + from);

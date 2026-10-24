@@ -7,6 +7,7 @@ Aplikasi web catatan harian untuk pekerjaan kaigo. Berjalan **offline** di satu 
 - Daftar catatan tampil 50 per halaman, lanjutkan dengan「⬇ もっと見る」.
 - **👤 利用者で見る** — tekan tombol nama (atau ketik nama/ふりがな) → hanya catatan pasien itu yang tampil, plus memo pasien.
 - **⚙️ 利用者の管理** — 10 枠 (slot) pasien. Tombol ✏️ 編集 untuk mengubah data, 🗑 削除 saat pasien keluar/meninggal: slot menjadi （空き） dan bisa langsung diisi pasien pengganti dengan「＋ ここに登録する」. Catatan pasien lama tidak tercampur dengan pasien baru.
+- **📝 月間評価** — form evaluasi bulanan per pasien: 6 aspek (体調・食事・排泄・睡眠・動き・気持ち) dinilai ◎ 良くなった / ○ 変わらない / △ 悪くなった dibanding bulan lalu, plus memo. Catatan ヒヤリ・事故 bulan itu otomatis diambil dari catatan harian, lalu diisi ふり返り dan 対策. Ada まとめ・来月の目標. Evaluasi lama bisa dibuka (◀ 前の月 / 📚 これまでの評価) dan diperbaiki lagi; hasil bulan lalu tampil sebagai pembanding. Bisa dicetak.
 - **📊 年間まとめ** — rekap per tahun (semua pasien atau satu pasien): jumlah catatan per bulan, per jenis, per pasien, dan daftar catatan ⭐ 重要. Bisa dicetak.
 - **🗑 ゴミ箱** — catatan atau pasien yang dihapus masuk ke sini (pasien beserta semua catatannya). Bisa dilihat (📖 記録を見る), dikembalikan (↩️ 元に戻す), atau dihapus permanen (完全に消す). Isi ゴミ箱 **terhapus otomatis setelah 30 hari**.
 - Catatan berisi teks, **foto** (otomatis diperkecil agar ringan) dan video pendek (maks. 100MB), jenis catatan **bebas** (ketik sendiri atau pilih tombol: 食事・服薬・ヒヤリ・事故 dll.), penulis, tanda ⭐ 重要.
