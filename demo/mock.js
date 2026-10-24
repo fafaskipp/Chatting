@@ -4,7 +4,7 @@
   const KEY = 'kaigo-demo-db-v1';
   const SLOT_COUNT = 10;
   const TRASH_DAYS = 30;
-  const DEFAULT_CATEGORIES = ['食事', '水分', '排泄', '入浴', '服薬・薬', '体調', '睡眠', '事故・ケガ', 'レク・活動', '家族連絡', 'その他'];
+  const DEFAULT_CATEGORIES = ['食事', '水分', '排泄', '入浴', '服薬・薬', '体調', '睡眠', 'ヒヤリ・事故', 'レク・活動', '家族連絡', 'その他'];
   const memoryMedia = new Map(); // 保存しきれない動画などはメモリだけに置く
 
   const z = (n) => String(n).padStart(2, '0');
@@ -20,7 +20,11 @@
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        for (const n of saved.notes) if (n.category === '事故・ケガ') n.category = 'ヒヤリ・事故';
+        return saved;
+      }
     } catch {}
     return sample();
   }
@@ -44,14 +48,14 @@
     ];
     const rows = [
       [0, '12:30', 'p1', '食事', '昼食 全量摂取。むせ込みなし。', false, 'グエン'],
-      [0, '10:15', 'p3', '事故・ケガ', '居室で転倒。右ひざに軽いすり傷。看護師に報告済み。', true, 'グエン'],
+      [0, '10:15', 'p3', 'ヒヤリ・事故', '居室で転倒。右ひざに軽いすり傷。看護師に報告済み。', true, 'グエン'],
       [0, '09:00', null, '家族連絡', '本日15時に山田様のご家族が面会予定。', true, '佐々木'],
       [0, '08:00', 'p2', '服薬・薬', '朝の薬 服用確認。', false, 'グエン'],
       [1, '14:00', 'p1', '受診', '内科受診。異常なし。次回は来月。', false, '佐々木'],
       [1, '07:30', 'p5', '体調', '37.6度。水分多めにすすめる。', false, 'グエン'],
       [3, '15:00', 'p2', 'レク・活動', '書道レクに参加。笑顔が多かった。', false, '佐々木'],
       [6, '20:00', 'p3', '睡眠', '夜間 2回トイレ。その後よく眠れていた。', false, 'グエン'],
-      [12, '11:00', 'p5', '事故・ケガ', '食堂で立ち上がる時にふらつき。転倒なし。', true, '佐々木'],
+      [12, '11:00', 'p5', 'ヒヤリ・事故', '食堂で立ち上がる時にふらつき。転倒なし。', true, '佐々木'],
       [40, '10:00', 'p1', '体調', '食欲低下。昼食 半量。', true, 'グエン'],
     ];
     const notes = rows.map(([ago, time, patientId, category, text, important, author], i) => ({

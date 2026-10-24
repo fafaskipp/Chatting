@@ -49,6 +49,8 @@ function loadDb() {
   const db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
   db.patients = db.patients || [];
   db.notes = db.notes || [];
+  // 種類の名前を変えたので、以前の記録も新しい名前にそろえる
+  for (const n of db.notes) if (n.category === '事故・ケガ') n.category = 'ヒヤリ・事故';
   // 以前の版のデータに枠番号を付ける
   for (const p of db.patients) {
     if (!p.slot && !p.deletedAt) p.slot = firstFreeSlot(db);
@@ -221,7 +223,7 @@ function sortNotes(notes) {
 
 // ---------- API ----------
 
-const DEFAULT_CATEGORIES = ['食事', '水分', '排泄', '入浴', '服薬・薬', '体調', '睡眠', '事故・ケガ', 'レク・活動', '家族連絡', 'その他'];
+const DEFAULT_CATEGORIES = ['食事', '水分', '排泄', '入浴', '服薬・薬', '体調', '睡眠', 'ヒヤリ・事故', 'レク・活動', '家族連絡', 'その他'];
 
 function activePatients() {
   return db.patients.filter((p) => !p.deletedAt);

@@ -9,7 +9,7 @@ Aplikasi web catatan harian untuk pekerjaan kaigo. Berjalan **offline** di satu 
 - **⚙️ 利用者の管理** — 10 枠 (slot) pasien. Tombol ✏️ 編集 untuk mengubah data, 🗑 削除 saat pasien keluar/meninggal: slot menjadi （空き） dan bisa langsung diisi pasien pengganti dengan「＋ ここに登録する」. Catatan pasien lama tidak tercampur dengan pasien baru.
 - **📊 年間まとめ** — rekap per tahun (semua pasien atau satu pasien): jumlah catatan per bulan, per jenis, per pasien, dan daftar catatan ⭐ 重要. Bisa dicetak.
 - **🗑 ゴミ箱** — catatan atau pasien yang dihapus masuk ke sini (pasien beserta semua catatannya). Bisa dilihat (📖 記録を見る), dikembalikan (↩️ 元に戻す), atau dihapus permanen (完全に消す). Isi ゴミ箱 **terhapus otomatis setelah 30 hari**.
-- Catatan berisi teks, **foto** (otomatis diperkecil agar ringan) dan video pendek (maks. 100MB), jenis catatan **bebas** (ketik sendiri atau pilih tombol: 食事・服薬・事故・ケガ dll.), penulis, tanda ⭐ 重要.
+- Catatan berisi teks, **foto** (otomatis diperkecil agar ringan) dan video pendek (maks. 100MB), jenis catatan **bebas** (ketik sendiri atau pilih tombol: 食事・服薬・ヒヤリ・事故 dll.), penulis, tanda ⭐ 重要.
 - **🖨 印刷・PDF** — mencetak daftar yang sedang tampil (pilih「PDFに保存」di jendela cetak untuk membuat PDF).
 - **📊 Excelで保存** — menyimpan daftar yang sedang tampil sebagai file CSV yang bisa dibuka langsung di Excel.
 - Otomatis menampilkan catatan baru dari komputer lain (setiap 10 detik). Beberapa orang bisa menyimpan catatan bersamaan tanpa ada yang hilang.
