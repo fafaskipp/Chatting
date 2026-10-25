@@ -243,7 +243,7 @@ function renderPatientButtons() {
   const list = state.patients.filter((p) => !kw || `${p.name}${p.kana}`.replace(/\s/g, '').toLowerCase().includes(kw));
   const box = $('#patient-buttons');
   if (!state.patients.length) {
-    box.innerHTML = '<div class="empty">利用者がまだ登録されていません。「⚙️ 利用者の管理」から登録してください。</div>';
+    box.innerHTML = '<div class="empty">利用者がまだ登録されていません。「⚙️ 管理」から登録してください。</div>';
     return;
   }
   box.innerHTML =
@@ -473,7 +473,7 @@ async function loadMonthEvents() {
   const s = await api('summary?month=' + state.month);
   const groups = s.groups.filter((g) => g.id !== 'none' || g.notes.length);
   if (!groups.length) {
-    $('#rep-body').innerHTML = '<div class="empty">利用者がまだ登録されていません。「⚙️ 利用者の管理」から登録してください。</div>';
+    $('#rep-body').innerHTML = '<div class="empty">利用者がまだ登録されていません。「⚙️ 管理」から登録してください。</div>';
     return;
   }
   $('#rep-body').innerHTML = groups

@@ -249,6 +249,16 @@ function lanAddresses() {
 dailyBackup();
 store.purgeExpiredTrash();
 setInterval(store.purgeExpiredTrash, 60 * 60 * 1000);
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log('');
+    console.log(`  [!] Port ${PORT} sudah dipakai. Kemungkinan server Kaigo Nikki sudah berjalan.`);
+    console.log(`      Buka saja http://localhost:${PORT} di browser.`);
+    console.log('');
+    process.exit(1);
+  }
+  throw err;
+});
 server.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('  介護日記 サーバーが起動しました');

@@ -49,7 +49,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   margin: 0 auto;
 }
 .tab {
-  padding: 14px 8px;
+  padding: 10px 4px;
   border: 3px solid var(--blue);
   border-radius: var(--radius) var(--radius) 0 0;
   background: #fff;
@@ -59,9 +59,9 @@ button, input, textarea, select { font: inherit; color: inherit; }
   cursor: pointer;
 }
 .tab.active { background: var(--blue); color: #fff; }
-.tab .lb-s { display: none; }
-.tab .ic { margin-right: 4px; }
-.tab { position: relative; }
+/* タブは画面の大きさに関係なく、アイコンの下に短い名前 */
+.tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; line-height: 1.2; }
+.tab .ic { font-size: 1.5rem; }
 .badge {
   position: absolute; top: 4px; right: 6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px;
   background: var(--red); color: #fff; font-size: .8rem; line-height: 22px; text-align: center;
@@ -344,15 +344,6 @@ dialog h2 { margin: 0; }
   background: #222; color: #fff; padding: 12px 22px; border-radius: 999px; font-weight: bold; z-index: 100;
 }
 
-/* タブレット：タブは短い名前にする */
-@media (min-width: 761px) and (max-width: 1100px) {
-  .tabs { gap: 6px; }
-  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 2px; font-size: 1rem; line-height: 1.3; }
-  .tab .ic { margin: 0; font-size: 1.4rem; }
-  .tab .lb { display: none; }
-  .tab .lb-s { display: block; }
-}
-
 @media (max-width: 760px) {
   :root { font-size: 17px; }
   .topbar h1 { font-size: 1.2rem; }
@@ -363,10 +354,8 @@ dialog h2 { margin: 0; }
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0; padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
     gap: 2px; background: #fff; border-top: 2px solid var(--line); max-width: none;
   }
-  .tab { border: none; border-radius: 10px; padding: 4px 0; font-size: .8rem; display: flex; flex-direction: column; align-items: center; line-height: 1.2; min-height: 60px; justify-content: center; }
-  .tab .ic { font-size: 1.4rem; margin: 0; }
-  .tab .lb { display: none; }
-  .tab .lb-s { display: block; }
+  .tab { border: none; border-radius: 10px; padding: 4px 0; font-size: .8rem; min-height: 60px; }
+  .tab .ic { font-size: 1.4rem; }
   main { padding: 12px; }
   .filters, .card { padding: 10px; }
   .quick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
