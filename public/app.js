@@ -26,6 +26,7 @@ const state = {
   pickedDate: '',
   selectedPatient: null,
   patients: [],
+  unitName: '', // ⚙️ 管理で設定するユニット・部屋の名前
   categories: Object.keys(CATEGORY_COLORS),
   slots: 10,
   version: 0,
@@ -109,6 +110,16 @@ function catColor(name) {
   return AUTO_COLORS[h % AUTO_COLORS.length];
 }
 
+// 画面の上とブラウザのタブに出す名前（未設定なら「介護日記」）
+function appName() {
+  return state.unitName || '介護日記';
+}
+
+function renderUnitName() {
+  $('#unit-name').textContent = appName();
+  document.title = appName();
+}
+
 function patientName(id) {
   const p = state.patients.find((x) => x.id === id);
   return p ? p.name : '';
@@ -186,13 +197,16 @@ function notesHtml(notes, showPatient, mode, nameOverride) {
   return html;
 }
 
-// 今の画面の検索条件（表示・印刷・Excel 共通）
+// 今の画面の検索条件（表示・印刷 共通）
 function currentQuery() {
   const q = new URLSearchParams();
   let title = '';
   if (state.view === 'patient') {
     if (state.selectedPatient) q.set('patientId', state.selectedPatient);
-    title = state.selectedPatient === 'none' ? '全体・共有の記録' : `${patientName(state.selectedPatient)} 様の記録`;
+    q.set('from', state.month + '-01');
+    q.set('to', state.month + '-31');
+    const who = state.selectedPatient === 'none' ? '全体・共有' : `${patientName(state.selectedPatient)} 様`;
+    title = `${appName()}　${who}の記録（${jpMonth(state.month)}）`;
     return { q, title };
   }
   const range = {
@@ -214,7 +228,7 @@ function currentQuery() {
   const kw = $('#date-search').value.trim();
   if (kw) q.set('q', kw);
   if ($('#date-important').checked) q.set('important', '1');
-  title = `介護日記（${label}${cat ? '・' + cat : ''}${kw ? '・「' + kw + '」' : ''}${$('#date-important').checked ? '・重要のみ' : ''}）`;
+  title = `${appName()}（${label}${cat ? '・' + cat : ''}${kw ? '・「' + kw + '」' : ''}${$('#date-important').checked ? '・重要のみ' : ''}）`;
   return { q, title };
 }
 
@@ -285,8 +299,8 @@ async function loadPatientView() {
   head.innerHTML = p
     ? `<h2>👤 ${esc(p.name)} 様の記録</h2>${p.memo ? `<div class="patient-memo">📌 ${esc(p.memo)}</div>` : ''}`
     : '<h2>全体・共有の記録</h2>';
-  const q = new URLSearchParams({ patientId: state.selectedPatient });
-  await loadPaged('patient', listEl, q, false, '<div class="empty">記録はありません。</div>');
+  renderMonthNav();
+  await loadPaged('patient', listEl, currentQuery().q, false, `<div class="empty">${jpMonth(state.month)}の記録はありません。<br>「◀ 前の月」で前の月を見られます。</div>`);
 }
 
 function selectPatient(id) {
@@ -807,7 +821,11 @@ async function refresh() {
   try {
     const v = await api('version');
     state.version = v.version;
-    [state.patients, state.categories] = await Promise.all([api('patients'), api('categories')]);
+    const [patients, categories, settings] = await Promise.all([api('patients'), api('categories'), api('settings')]);
+    state.patients = patients;
+    state.categories = categories;
+    state.unitName = settings.unitName || '';
+    renderUnitName();
     renderCategoryFilter();
     await loadReminders();
     if (state.view === 'date') await loadDateView();
@@ -815,7 +833,11 @@ async function refresh() {
     else if (state.view === 'summary') await loadSummary();
     else if (state.view === 'report') await loadMonthEvents();
     else if (state.view === 'cal') await loadCalendar();
-    else if (state.view === 'manage') renderSlots();
+    else if (state.view === 'manage') {
+      renderSlots();
+      const input = $('#unit-form').unitName;
+      if (document.activeElement !== input) input.value = state.unitName;
+    }
     else await loadTrash();
   } catch (e) {
     toast(e.message);
@@ -964,16 +986,9 @@ async function printView() {
   window.print();
 }
 
-// 印刷・Excel
+// 印刷
 document.addEventListener('click', (e) => {
   if (e.target.closest('[data-print]')) printView().catch((err) => toast(err.message));
-  else if (e.target.closest('[data-export]')) {
-    const a = document.createElement('a');
-    a.href = '/api/export.csv?' + currentQuery().q;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
 });
 
 // 記録の「直す」「消す」・ゴミ箱・写真の拡大
@@ -1045,6 +1060,16 @@ $('#note-form').addEventListener('click', (e) => {
 });
 
 // 利用者の管理
+$('#unit-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await api('settings', { method: 'PUT', body: { unitName: e.target.unitName.value } });
+    toast('保存しました ✅');
+    refresh();
+  } catch (err) {
+    toast(err.message);
+  }
+});
 $('#slot-list').addEventListener('click', async (e) => {
   const add = e.target.closest('[data-padd]');
   const edit = e.target.closest('[data-pedit]');

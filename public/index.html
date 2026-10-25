@@ -8,7 +8,7 @@
 </head>
 <body>
   <header class="topbar">
-    <h1>📒 介護日記</h1>
+    <h1>📒 <span id="unit-name">介護日記</span></h1>
     <button id="btn-new" class="btn btn-new">＋ 記録を書く</button>
   </header>
 
@@ -48,7 +48,6 @@
       </div>
       <div class="toolbar">
         <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
-        <button class="btn btn-excel" data-export>📊 Excelで保存</button>
       </div>
       <div id="date-list" class="list"></div>
     </section>
@@ -60,9 +59,17 @@
         <div id="patient-buttons" class="patient-grid"></div>
       </div>
       <div id="patient-head"></div>
-      <div class="toolbar" id="patient-toolbar" hidden>
-        <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
-        <button class="btn btn-excel" data-export>📊 Excelで保存</button>
+      <div id="patient-toolbar" hidden>
+        <div class="filters">
+          <div class="month-nav">
+            <button type="button" class="btn btn-gray" data-month="-1">◀ 前の月</button>
+            <h2 class="month-label"></h2>
+            <button type="button" class="btn btn-gray" data-month="1">次の月 ▶</button>
+          </div>
+        </div>
+        <div class="toolbar">
+          <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
+        </div>
       </div>
       <div id="patient-list" class="list"></div>
     </section>
@@ -120,6 +127,14 @@
 
     <!-- 利用者の管理（枠） -->
     <section id="view-manage" class="view" hidden>
+      <form id="unit-form" class="card">
+        <h2 style="margin-top:0">🏠 ユニット・部屋の名前</h2>
+        <p class="sub-hint" style="margin-bottom:10px">画面のいちばん上に出る名前です。ユニットや部屋ごとに変えてください。</p>
+        <div class="row">
+          <label>名前 <input name="unitName" maxlength="40" placeholder="例：さくらユニット、2階東"></label>
+          <button type="submit" class="btn btn-save" style="flex:0 0 auto">💾 保存する</button>
+        </div>
+      </form>
       <p class="hint">利用者は <b id="slot-count">10</b> 人まで登録できます。退所・ご逝去のときは「🗑 削除」を押すと、その枠が「空き」になり、新しい方を登録できます。<br>削除した方の記録はゴミ箱に残り、あとから元に戻せます。</p>
       <div id="slot-list" class="slot-grid"></div>
       <div id="server-info" class="info"></div>

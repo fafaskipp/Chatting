@@ -20,7 +20,7 @@ swap('function uploadFile(file) {', 'function uploadFile(file) {\n  return demoU
 let body = html.slice(html.indexOf('<body>') + 6, html.indexOf('</body>')).replace(/<script src="app.js"><\/script>/, '');
 body = body.replace('<main>', `<main>
     <div class="demo-banner">
-      <div>🧪 <b>デモ版</b>（試すための版です）　データはこの端末のブラウザの中だけに保存されます。<br>印刷・Excel・ほかの端末との共有は、パソコンで動かす本番版で使えます。</div>
+      <div>🧪 <b>デモ版</b>（試すための版です）　データはこの端末のブラウザの中だけに保存されます。<br>印刷・ほかの端末との共有は、パソコンで動かす本番版で使えます。</div>
       <button type="button" class="btn btn-gray" id="demo-reset">↺ サンプルに戻す</button>
     </div>`);
 
@@ -28,7 +28,7 @@ const demoCss = `
 .topbar { top: env(safe-area-inset-top, 0px); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--blue); }
 main { padding-left: max(16px, env(safe-area-inset-left, 0px)) !important; padding-right: max(16px, env(safe-area-inset-right, 0px)) !important; }
-[data-print], [data-export] { display: none !important; }
+[data-print] { display: none !important; }
 .demo-banner { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; background: #ede7f6; border-left: 8px solid #6a1b9a; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; }
 .demo-banner > div { flex: 1 1 260px; min-width: 0; }
 .demo-banner .btn { min-height: 44px; font-size: 1rem; }

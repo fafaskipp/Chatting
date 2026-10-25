@@ -191,16 +191,6 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { addresses: lanAddresses(), port: PORT, slots: SLOT_COUNT, trashDays: TRASH_DAYS });
   }
 
-  if (resource === 'export.csv' && method === 'GET') {
-    const filename = `介護日記_${localDate()}.csv`;
-    res.writeHead(200, {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="kaigo.csv"; filename*=UTF-8''${encodeURIComponent(filename)}`,
-      'Cache-Control': 'no-store',
-    });
-    return res.end(store.csv(url.searchParams));
-  }
-
   // 写真・動画のアップロード（本文はファイルそのもの）
   if (resource === 'upload' && method === 'POST') {
     const original = decodeURIComponent(String(req.headers['x-filename'] || 'file'));

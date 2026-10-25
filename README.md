@@ -5,15 +5,14 @@ Aplikasi web catatan harian untuk pekerjaan kaigo. Berjalan **offline** di satu 
 ## Fitur
 - **📅 日付** — catatan per tanggal, yang terbaru paling atas. Tombol cepat 今日 / 昨日 / 1週間 / 1か月 / すべて dan ⭐ 重要だけ. Pilih tanggal, jenis, dan cari kata ada di「🔍 詳しく探す」.
 - Daftar catatan tampil 50 per halaman, lanjutkan dengan「⬇ もっと見る」.
-- **👤 利用者** — tekan tombol nama (atau ketik nama/ふりがな) → hanya catatan pasien itu yang tampil, plus memo pasien.
-- **⚙️ 管理** — 10 枠 (slot) pasien. Tombol ✏️ 編集 untuk mengubah data, 🗑 削除 saat pasien keluar/meninggal: slot menjadi （空き） dan bisa langsung diisi pasien pengganti dengan「＋ ここに登録する」. Catatan pasien lama tidak tercampur dengan pasien baru.
+- **👤 利用者** — tekan tombol nama (atau ketik nama/ふりがな) → hanya catatan pasien itu yang tampil, plus memo pasien. Catatan ditampilkan per bulan; pindah bulan dengan ◀ 前の月 / 次の月 ▶.
+- **⚙️ 管理** — nama unit/ruangan (🏠 ユニット・部屋の名前) yang tampil di bagian paling atas aplikasi dan di tab browser; kalau kosong tertulis 介護日記. Lalu 10 枠 (slot) pasien. Tombol ✏️ 編集 untuk mengubah data, 🗑 削除 saat pasien keluar/meninggal: slot menjadi （空き） dan bisa langsung diisi pasien pengganti dengan「＋ ここに登録する」. Catatan pasien lama tidak tercampur dengan pasien baru.
 - **🗓 予定** — kalender bulanan seperti Google Calendar, diisi langsung di aplikasi: tanggal, jam, isi agenda, pasien (atau 全体), ulangi (なし / 毎週 / 毎月, bisa sampai tanggal tertentu), dan memo. Ketuk tanggal untuk melihat atau menambah agenda hari itu. Agenda hari ini dan besok muncul sebagai pengingat 🔔 di atas tab 📅 日付, dan jumlah agenda hari ini tampil di tab 🗓.
 - **📝 評価** — hanya menampilkan data (tanpa input): per bulan, setiap pasien beserta kejadian bulan itu — ⚠️ ヒヤリ・事故 dan ⭐ catatan penting — diambil otomatis dari catatan harian. Tombol「📖 この月の記録をすべて見る」untuk melihat semua catatan pasien bulan itu. Pindah bulan dengan ◀ 前の月 / 次の月 ▶. Bisa dicetak.
 - **📊 まとめ** — rekap per bulan (semua pasien atau satu pasien): jumlah catatan, ヒヤリ・事故, catatan penting, jumlah per jenis dan per pasien, serta daftar catatan ⭐ 重要. Bisa dicetak.
 - **🗑 ゴミ箱** — catatan, agenda, atau pasien yang dihapus masuk ke sini. Saat pasien dihapus, **semua data yang berhubungan dengan pasien itu** (catatan dan agenda, termasuk yang sebelumnya sudah dihapus satu per satu) dikumpulkan jadi satu bersama pasien; saat pasien dihapus permanen, semuanya ikut terhapus. Bisa dilihat (📖 記録を見る), dikembalikan (↩️ 元に戻す), atau dihapus permanen (完全に消す). Isi ゴミ箱 **terhapus otomatis setelah 30 hari**.
 - Catatan berisi teks, **foto** (otomatis diperkecil agar ringan) dan video pendek (maks. 100MB), jenis catatan **bebas** (ketik sendiri atau pilih tombol: 食事・服薬・ヒヤリ・事故 dll.), penulis, tanda ⭐ 重要.
 - **🖨 印刷・PDF** — mencetak daftar yang sedang tampil (pilih「PDFに保存」di jendela cetak untuk membuat PDF).
-- **📊 Excelで保存** — menyimpan daftar yang sedang tampil sebagai file CSV yang bisa dibuka langsung di Excel.
 - Otomatis menampilkan catatan baru dari komputer lain (setiap 10 detik). Beberapa orang bisa menyimpan catatan bersamaan tanpa ada yang hilang.
 - Menu tab memakai nama pendek dengan ikon, sama di semua ukuran layar. Di HP, menu pindah ke bawah layar agar mudah dijangkau jempol.
 - Backup otomatis harian di `data/backups/` (30 hari terakhir).
@@ -37,7 +36,7 @@ Semua data ada di folder **`data/`** (`db.json` + `uploads/` untuk foto/video). 
 
 Port, lokasi data, dan jumlah slot bisa diganti: `PORT=8080 DATA_DIR=D:\kaigo-data SLOTS=12 node server.js`.
 
-> Catatan: data pasien yang dihapus akan hilang permanen 30 hari kemudian. Kalau masih ingin menyimpan catatannya, kembalikan dulu pasiennya (↩️ 元に戻す), lalu cetak atau simpan ke Excel.
+> Catatan: data pasien yang dihapus akan hilang permanen 30 hari kemudian. Kalau masih ingin menyimpan catatannya, kembalikan dulu pasiennya (↩️ 元に戻す), lalu cetak.
 
 ## Versi demo (iPad / tanpa server)
-`node demo/build.js` membuat `demo/kaigo-demo.html`: satu file yang berjalan langsung di browser tanpa server, berisi contoh data. Data hanya tersimpan di browser perangkat itu. Cetak, Excel, dan berbagi antar-perangkat tidak tersedia di versi demo.
+`node demo/build.js` membuat `demo/kaigo-demo.html`: satu file yang berjalan langsung di browser tanpa server, berisi contoh data. Data hanya tersimpan di browser perangkat itu. Cetak dan berbagi antar-perangkat tidak tersedia di versi demo.

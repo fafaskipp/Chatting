@@ -38,7 +38,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   background: var(--blue);
   color: #fff;
 }
-.topbar h1 { margin: 0; font-size: 1.5rem; }
+.topbar h1 { margin: 0; font-size: 1.5rem; min-width: 0; overflow-wrap: anywhere; }
 
 .tabs {
   display: grid;
@@ -92,7 +92,6 @@ main { max-width: 1000px; margin: 0 auto; padding: 16px; }
 .btn-del { background: var(--red); min-height: 44px; padding: 6px 16px; font-size: 1rem; }
 .btn-media { background: #6a1b9a; }
 .btn-print { background: #455a64; }
-.btn-excel { background: #1b5e20; }
 .btn-restore { background: var(--blue); min-height: 44px; padding: 6px 16px; font-size: 1rem; }
 .btn-add { background: var(--green); width: 100%; }
 
