@@ -36,7 +36,17 @@
       id: 'n' + i, date: daysAgo(ago), time, patientId, category, text, important, author, media: [],
       createdAt: now(), updatedAt: now(),
     }));
-    return { patients, notes, media: {}, version: 1 };
+    const ev = (id, ago, time, title, patientId, repeat = '', memo = '') => ({
+      id, date: daysAgo(ago), time, title, patientId, repeat, until: '', memo, createdAt: now(), updatedAt: now(),
+    });
+    const events = [
+      ev('e1', 0, '15:00', '山田様 ご家族の面会', 'p1'),
+      ev('e2', -1, '10:00', '内科受診', 'p3', '', '保険証とお薬手帳を持っていく'),
+      ev('e3', -5, '14:00', '誕生日会', null, 'monthly', '今月生まれの方をお祝い'),
+      ev('e4', 2, '', '入浴日', 'p2', 'weekly'),
+      ev('e5', -9, '13:30', '歯科の訪問診療', 'p5'),
+    ];
+    return { patients, notes, events, media: {}, version: 1 };
   }
 
   function load() {

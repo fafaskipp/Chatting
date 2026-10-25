@@ -34,6 +34,10 @@ const state = {
   openTrash: null,
   month: ymd(new Date()).slice(0, 7), // 月間評価・月間まとめで見ている月
   openMonthAll: new Set(), // 月間評価で「すべて見る」を開いている利用者
+  calMonth: ymd(new Date()).slice(0, 7), // カレンダーで見ている月
+  calDay: ymd(new Date()), // カレンダーでえらんでいる日
+  calEvents: [],
+  eventForm: { patientId: null, repeat: '' },
   lists: { date: { key: '', count: PAGE }, patient: { key: '', count: PAGE } },
 };
 
@@ -279,6 +283,157 @@ function selectPatient(id) {
   loadPatientView().catch((e) => toast(e.message));
 }
 
+// ---------- 予定（カレンダー） ----------
+
+const REPEAT_LABEL = { '': 'なし', weekly: '毎週', monthly: '毎月' };
+
+function eventColor(e) {
+  return e.patientId ? 'var(--green)' : 'var(--blue)';
+}
+
+function eventHtml(e, withDate) {
+  const who = e.patientId
+    ? `<span class="tag tag-patient">👤 ${esc(patientName(e.patientId))} 様</span>`
+    : '<span class="tag" style="background:var(--blue)">全体</span>';
+  return `<div class="event-item">
+    <div class="ev-time">${withDate ? esc(Number(e.date.slice(8, 10)) + '日') + '<br>' : ''}${e.time ? esc(e.time) : '終日'}</div>
+    <div class="ev-body">
+      <div class="title">${esc(e.title)}</div>
+      <div class="chips">${who}${e.repeat ? `<span class="tag tag-none">🔁 ${REPEAT_LABEL[e.repeat]}</span>` : ''}</div>
+      ${e.memo ? `<div class="text">${esc(e.memo)}</div>` : ''}
+    </div>
+    <button class="btn btn-edit" data-eedit="${e.id}">✏️ 直す</button>
+  </div>`;
+}
+
+async function loadCalendar() {
+  const [y, m] = state.calMonth.split('-').map(Number);
+  $('#cal-label').textContent = jpMonth(state.calMonth);
+  const first = new Date(y, m - 1, 1);
+  const start = new Date(y, m - 1, 1 - first.getDay()); // 日曜はじまり
+  const weeks = Math.ceil((first.getDay() + new Date(y, m, 0).getDate()) / 7);
+  const days = [];
+  for (let i = 0; i < weeks * 7; i++) days.push(ymd(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i)));
+  const events = await api(`events?from=${days[0]}&to=${days[days.length - 1]}`);
+  state.calEvents = events;
+  const byDay = new Map();
+  for (const e of events) (byDay.get(e.date) || byDay.set(e.date, []).get(e.date)).push(e);
+  const today = ymd(new Date());
+
+  $('#cal-grid').innerHTML =
+    WEEK.map((w, i) => `<div class="cal-head ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${w}</div>`).join('') +
+    days
+      .map((d, i) => {
+        const list = byDay.get(d) || [];
+        const cls = [
+          d.slice(0, 7) !== state.calMonth ? 'other' : '',
+          d === today ? 'today' : '',
+          d === state.calDay ? 'sel' : '',
+          i % 7 === 0 ? 'sun' : i % 7 === 6 ? 'sat' : '',
+        ].join(' ');
+        return `<button type="button" class="cal-cell ${cls}" data-day="${d}">
+          <span class="dnum">${Number(d.slice(8, 10))}</span>
+          ${list.slice(0, 3).map((e) => `<span class="cal-ev" style="background:${eventColor(e)}">${e.time ? esc(e.time) + ' ' : ''}${esc(e.title)}</span>`).join('')}
+          ${list.length > 3 ? `<span class="cal-more">＋${list.length - 3}件</span>` : ''}
+        </button>`;
+      })
+      .join('');
+
+  const dayList = byDay.get(state.calDay) || [];
+  $('#cal-day').innerHTML = state.calDay
+    ? `<div class="rep-block">
+        <div class="area-head"><h3>${jpDate(state.calDay)}の予定</h3>
+          <button class="btn btn-add" style="width:auto" data-eadd="${state.calDay}">＋ この日に入れる</button></div>
+        ${dayList.length ? dayList.map((e) => eventHtml(e, false)).join('') : '<p class="sub-hint">この日の予定はありません。</p>'}
+      </div>`
+    : '';
+
+  const monthList = events.filter((e) => e.date.slice(0, 7) === state.calMonth);
+  $('#cal-list').innerHTML = monthList.length
+    ? `<div class="rep-block">${monthList.map((e) => eventHtml(e, true)).join('')}</div>`
+    : '<div class="empty">この月の予定はまだありません。<br>「＋ 予定を入れる」から入れられます。</div>';
+}
+
+// 今日・明日の予定（日付の画面の上に出して、タブに件数を出す）
+async function loadReminders() {
+  const today = daysAgo(0);
+  const tomorrow = daysAgo(-1);
+  const list = await api(`events?from=${today}&to=${tomorrow}`);
+  const todays = list.filter((e) => e.date === today);
+  const badge = $('#cal-badge');
+  badge.hidden = !todays.length;
+  badge.textContent = todays.length;
+  const tomorrows = list.filter((e) => e.date === tomorrow);
+  const line = (e) =>
+    `<div>・${e.time ? esc(e.time) + '　' : ''}<b>${esc(e.title)}</b>${e.patientId ? `（${esc(patientName(e.patientId))} 様）` : ''}</div>`;
+  $('#reminder').innerHTML = list.length
+    ? `<div class="reminder">
+        ${todays.length ? `<h3>🔔 今日の予定（${todays.length}件）</h3>${todays.map(line).join('')}` : ''}
+        ${tomorrows.length ? `<h3 style="margin-top:8px">📅 明日の予定（${tomorrows.length}件）</h3>${tomorrows.map(line).join('')}` : ''}
+      </div>`
+    : '';
+}
+
+function renderEventChoices() {
+  $('#eform-patients').innerHTML =
+    state.patients
+      .map((p) => `<button type="button" class="choice ${state.eventForm.patientId === p.id ? 'active' : ''}" data-epid="${p.id}">${esc(p.name)}<small>${esc(p.kana)}</small></button>`)
+      .join('') +
+    `<button type="button" class="choice ${!state.eventForm.patientId ? 'active' : ''}" data-epid="">全体<small>特定の人ではない</small></button>`;
+  $('#eform-repeat').innerHTML = Object.entries(REPEAT_LABEL)
+    .map(([k, label]) => {
+      const on = state.eventForm.repeat === k;
+      return `<button type="button" class="cat-chip ${on ? 'active' : ''}" data-erep="${k}" style="color:var(--blue);${on ? 'background:var(--blue)' : ''}">${label}</button>`;
+    })
+    .join('');
+  $('#eform-until-wrap').hidden = !state.eventForm.repeat;
+  $('#eform-repeat-note').hidden = !(state.eventForm.repeat && $('#event-form').id.value);
+}
+
+function openEventForm(e, date) {
+  const f = $('#event-form');
+  f.reset();
+  $('#eform-error').hidden = true;
+  f.id.value = e ? e.id : '';
+  f.date.value = e ? e.date : date || state.calDay || ymd(new Date());
+  f.time.value = e ? e.time : '';
+  f.title.value = e ? e.title : '';
+  f.until.value = e ? e.until : '';
+  f.memo.value = e ? e.memo : '';
+  state.eventForm = { patientId: e ? e.patientId : null, repeat: e ? e.repeat : '' };
+  $('#eform-title').textContent = e ? '予定を直す' : '予定を入れる';
+  $('#eform-delete').hidden = !e;
+  renderEventChoices();
+  $('#event-dialog').showModal();
+}
+
+async function saveEvent(ev) {
+  ev.preventDefault();
+  const f = $('#event-form');
+  const body = {
+    date: f.date.value,
+    time: f.time.value,
+    title: f.title.value,
+    patientId: state.eventForm.patientId,
+    repeat: state.eventForm.repeat,
+    until: f.until.value,
+    memo: f.memo.value,
+  };
+  try {
+    if (f.id.value) await api('events/' + f.id.value, { method: 'PUT', body });
+    else await api('events', { method: 'POST', body });
+    $('#event-dialog').close();
+    state.calDay = body.date;
+    state.calMonth = body.date.slice(0, 7);
+    toast('保存しました ✅');
+    refresh();
+  } catch (err) {
+    const el = $('#eform-error');
+    el.textContent = err.message;
+    el.hidden = false;
+  }
+}
+
 // ---------- 月ごとの表示（月間評価・月間まとめ） ----------
 
 function thisMonth() {
@@ -442,7 +597,7 @@ function daysLeft(iso) {
 async function loadTrash() {
   const t = await api('trash');
   const el = $('#trash-body');
-  if (!t.patients.length && !t.notes.length) {
+  if (!t.patients.length && !t.notes.length && !t.events.length) {
     el.innerHTML = '<div class="empty">ゴミ箱は空です。</div>';
     return;
   }
@@ -455,7 +610,7 @@ async function loadTrash() {
       html += `<div class="trash-item">
         <div class="row-head">
           <div><div class="name">${esc(p.name)} 様</div>
-            <div class="sub">削除した日：${jpDateTime(p.deletedAt)}　／　記録 ${p.noteCount} 件</div>
+            <div class="sub">削除した日：${jpDateTime(p.deletedAt)}　／　記録 ${p.noteCount} 件${p.eventCount ? `・予定 ${p.eventCount} 件` : ''}</div>
             <div class="sub">${daysLeft(p.expiresAt)}</div></div>
           <div class="actions">
             ${p.noteCount ? `<button class="btn btn-edit" data-tview="${p.id}">${open ? '▲ 閉じる' : '📖 記録を見る'}</button>` : ''}
@@ -472,6 +627,19 @@ async function loadTrash() {
     for (const n of t.notes) {
       const name = trashedNames.get(n.patientId) || patientName(n.patientId);
       html += `<div class="trash-item"><div class="sub">消した日：${jpDateTime(n.deletedAt)}　／　${daysLeft(n.expiresAt)}</div>${noteHtml(n, true, 'trash', name)}</div>`;
+    }
+  }
+  if (t.events.length) {
+    html += '<h2>消した予定</h2>';
+    for (const e of t.events) {
+      html += `<div class="trash-item"><div class="row-head">
+          <div><div class="name">${esc(jpDate(e.date, false))}　${esc(e.title)}</div>
+            <div class="sub">消した日：${jpDateTime(e.deletedAt)}　／　${daysLeft(e.expiresAt)}</div></div>
+          <div class="actions">
+            <button class="btn btn-restore" data-erestore="${e.id}">↩️ 元に戻す</button>
+            <button class="btn btn-del" data-epurge="${e.id}">完全に消す</button>
+          </div>
+        </div></div>`;
     }
   }
   el.innerHTML = html;
@@ -626,10 +794,12 @@ async function refresh() {
     state.version = v.version;
     [state.patients, state.categories] = await Promise.all([api('patients'), api('categories')]);
     renderCategoryFilter();
+    await loadReminders();
     if (state.view === 'date') await loadDateView();
     else if (state.view === 'patient') await loadPatientView();
     else if (state.view === 'summary') await loadSummary();
     else if (state.view === 'report') await loadMonthEvents();
+    else if (state.view === 'cal') await loadCalendar();
     else if (state.view === 'manage') renderSlots();
     else await loadTrash();
   } catch (e) {
@@ -685,6 +855,64 @@ $('#patient-search').addEventListener('input', renderPatientButtons);
 $('#patient-buttons').addEventListener('click', (e) => {
   const b = e.target.closest('[data-pid]');
   if (b) selectPatient(b.dataset.pid);
+});
+
+// 予定（カレンダー）
+document.addEventListener('click', async (e) => {
+  const t = (sel) => e.target.closest(sel);
+  let b;
+  try {
+    if ((b = t('[data-cal]'))) {
+      const d = Number(b.dataset.cal);
+      if (d === 0) {
+        state.calMonth = thisMonth();
+        state.calDay = ymd(new Date());
+      } else state.calMonth = shiftMonth(state.calMonth, d);
+      await loadCalendar();
+    } else if ((b = t('[data-day]'))) {
+      state.calDay = b.dataset.day;
+      if (b.dataset.day.slice(0, 7) !== state.calMonth) state.calMonth = b.dataset.day.slice(0, 7);
+      await loadCalendar();
+    } else if ((b = t('[data-eadd]'))) openEventForm(null, b.dataset.eadd);
+    else if ((b = t('[data-eedit]'))) openEventForm(await api('events/' + b.dataset.eedit));
+    else if ((b = t('[data-erestore]'))) {
+      await api(`events/${b.dataset.erestore}/restore`, { method: 'POST' });
+      toast('元に戻しました ✅');
+      refresh();
+    } else if ((b = t('[data-epurge]'))) {
+      if (!(await askConfirm('この予定を完全に消しますか？\n二度と元に戻せません。'))) return;
+      await api(`events/${b.dataset.epurge}/purge`, { method: 'DELETE' });
+      toast('完全に消しました');
+      refresh();
+    }
+  } catch (err) {
+    toast(err.message);
+  }
+});
+$('#event-form').addEventListener('submit', saveEvent);
+$('#eform-cancel').addEventListener('click', () => $('#event-dialog').close());
+$('#event-form').addEventListener('click', (e) => {
+  const p = e.target.closest('[data-epid]');
+  const r = e.target.closest('[data-erep]');
+  if (p) state.eventForm.patientId = p.dataset.epid || null;
+  else if (r) state.eventForm.repeat = r.dataset.erep;
+  else return;
+  renderEventChoices();
+});
+$('#eform-delete').addEventListener('click', async () => {
+  const id = $('#event-form').id.value;
+  const msg = state.eventForm.repeat
+    ? 'この予定をゴミ箱に移しますか？\n（くり返しの予定は、すべての回が消えます）'
+    : 'この予定をゴミ箱に移しますか？\n（ゴミ箱から元に戻せます）';
+  if (!(await askConfirm(msg))) return;
+  try {
+    await api('events/' + id, { method: 'DELETE' });
+    $('#event-dialog').close();
+    toast('ゴミ箱に移しました');
+    refresh();
+  } catch (err) {
+    toast(err.message);
+  }
 });
 
 // 月間評価・月間まとめ：月の切りかえと「すべて見る」
@@ -757,7 +985,7 @@ document.addEventListener('click', async (e) => {
   } else if ((b = t('[data-prestore]'))) {
     run(() => api(`patients/${b.dataset.prestore}/restore`, { method: 'POST' }), '元に戻しました ✅');
   } else if ((b = t('[data-ppurge]'))) {
-    if (await askConfirm('この方の情報と記録をすべて完全に消しますか？\n二度と元に戻せません。')) {
+    if (await askConfirm('この方の情報と、この方に関係する記録・予定をすべて完全に消しますか？\n二度と元に戻せません。')) {
       run(() => api(`patients/${b.dataset.ppurge}/purge`, { method: 'DELETE' }), '完全に消しました');
     }
   } else if ((b = t('[data-tview]'))) {
@@ -810,7 +1038,7 @@ $('#slot-list').addEventListener('click', async (e) => {
   else if (edit) openPatientForm(state.patients.find((x) => x.id === edit.dataset.pedit));
   else if (del) {
     const p = state.patients.find((x) => x.id === del.dataset.pdel);
-    if (!(await askConfirm(`${p.name} 様を削除しますか？\n\n・この枠は「空き」になり、新しい方を登録できます\n・記録はゴミ箱に移り、あとから元に戻せます`))) return;
+    if (!(await askConfirm(`${p.name} 様を削除しますか？\n\n・この枠は「空き」になり、新しい方を登録できます\n・この方の記録と予定はすべてゴミ箱に移り、あとから元に戻せます`))) return;
     api('patients/' + p.id, { method: 'DELETE' })
       .then(() => {
         if (state.selectedPatient === p.id) state.selectedPatient = null;

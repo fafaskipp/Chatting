@@ -15,6 +15,7 @@
   <nav class="tabs" role="tablist">
     <button class="tab active" data-view="date" role="tab"><span class="ic">📅</span><span class="lb">日付で見る</span><span class="lb-s">日付</span></button>
     <button class="tab" data-view="patient" role="tab"><span class="ic">👤</span><span class="lb">利用者で見る</span><span class="lb-s">利用者</span></button>
+    <button class="tab" data-view="cal" role="tab"><span class="ic">🗓</span><span class="lb">予定</span><span class="lb-s">予定</span><span class="badge" id="cal-badge" hidden></span></button>
     <button class="tab" data-view="report" role="tab"><span class="ic">📝</span><span class="lb">月間評価</span><span class="lb-s">評価</span></button>
     <button class="tab" data-view="summary" role="tab"><span class="ic">📊</span><span class="lb">月間まとめ</span><span class="lb-s">まとめ</span></button>
     <button class="tab" data-view="manage" role="tab"><span class="ic">⚙️</span><span class="lb">利用者の管理</span><span class="lb-s">管理</span></button>
@@ -26,6 +27,7 @@
 
     <!-- 日付で見る -->
     <section id="view-date" class="view">
+      <div id="reminder"></div>
       <div class="filters">
         <div class="quick">
           <button class="chip-btn active" data-range="today">今日</button>
@@ -63,6 +65,25 @@
         <button class="btn btn-excel" data-export>📊 Excelで保存</button>
       </div>
       <div id="patient-list" class="list"></div>
+    </section>
+
+    <!-- 予定（カレンダー） -->
+    <section id="view-cal" class="view" hidden>
+      <div class="filters">
+        <div class="month-nav">
+          <button type="button" class="btn btn-gray" data-cal="-1">◀ 前の月</button>
+          <h2 id="cal-label"></h2>
+          <button type="button" class="btn btn-gray" data-cal="1">次の月 ▶</button>
+        </div>
+        <div class="cal-actions">
+          <button type="button" class="btn btn-gray" data-cal="0">今日にもどる</button>
+          <button type="button" class="btn btn-new" data-eadd="">＋ 予定を入れる</button>
+        </div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div id="cal-day"></div>
+      <h2>📋 この月の予定</h2>
+      <div id="cal-list"></div>
     </section>
 
     <!-- 月間評価（見るだけ） -->
@@ -152,6 +173,36 @@
       <div class="actions">
         <button type="submit" class="btn btn-save" id="nform-save">💾 保存する</button>
         <button type="button" class="btn btn-gray" id="nform-cancel">やめる</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 予定の入力 -->
+  <dialog id="event-dialog">
+    <form id="event-form" class="form" method="dialog">
+      <h2 id="eform-title" tabindex="-1" autofocus>予定を入れる</h2>
+      <input type="hidden" name="id">
+      <div class="row">
+        <label>日付<input type="date" name="date" required></label>
+        <label>時刻（なくてもよい）<input type="time" name="time"></label>
+      </div>
+      <label>予定の内容（必須）<input name="title" maxlength="100" placeholder="例：内科受診、家族の面会、誕生日会"></label>
+      <fieldset>
+        <legend>だれの予定？</legend>
+        <div id="eform-patients" class="choice-grid"></div>
+      </fieldset>
+      <fieldset>
+        <legend>くり返し</legend>
+        <div id="eform-repeat" class="cat-chips"></div>
+        <label id="eform-until-wrap" hidden style="margin-top:10px">いつまで（なくてもよい）<input type="date" name="until"></label>
+        <small class="muted" id="eform-repeat-note" hidden>くり返しの予定を直すと、すべての回が変わります。</small>
+      </fieldset>
+      <label>メモ<textarea name="memo" rows="3" maxlength="2000" placeholder="例：保険証を持っていく"></textarea></label>
+      <p id="eform-error" class="error" hidden></p>
+      <div class="actions">
+        <button type="submit" class="btn btn-save">💾 保存する</button>
+        <button type="button" class="btn btn-gray" id="eform-cancel">やめる</button>
+        <button type="button" class="btn btn-del" id="eform-delete" hidden>🗑 消す</button>
       </div>
     </form>
   </dialog>

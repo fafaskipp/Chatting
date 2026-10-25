@@ -42,7 +42,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 8px;
   padding: 12px 16px 0;
   max-width: 1000px;
@@ -61,6 +61,11 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .tab.active { background: var(--blue); color: #fff; }
 .tab .lb-s { display: none; }
 .tab .ic { margin-right: 4px; }
+.tab { position: relative; }
+.badge {
+  position: absolute; top: 4px; right: 6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px;
+  background: var(--red); color: #fff; font-size: .8rem; line-height: 22px; text-align: center;
+}
 
 main { max-width: 1000px; margin: 0 auto; padding: 16px; }
 
@@ -96,6 +101,35 @@ main { max-width: 1000px; margin: 0 auto; padding: 16px; }
 .print-only { display: none; }
 .muted { color: var(--muted); display: block; }
 .sub-hint { color: var(--muted); margin: 6px 0 0; }
+
+/* 予定（カレンダー） */
+.cal-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; margin-top: 10px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-bottom: 16px; }
+.cal-head { text-align: center; font-weight: bold; padding: 4px 0; }
+.cal-head.sun, .cal-cell.sun .dnum { color: var(--red); }
+.cal-head.sat, .cal-cell.sat .dnum { color: var(--blue); }
+.cal-cell {
+  display: flex; flex-direction: column; gap: 2px; align-items: stretch; text-align: left;
+  min-height: 96px; min-width: 0; padding: 4px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--card); cursor: pointer; overflow: hidden;
+}
+.cal-cell.other { background: #f0eee8; opacity: .6; }
+.cal-cell.today { border: 3px solid var(--orange); }
+.cal-cell.sel { outline: 3px solid var(--blue); outline-offset: -3px; background: #e3f2fd; }
+.cal-cell .dnum { font-weight: bold; }
+.cal-ev {
+  display: block; padding: 1px 4px; border-radius: 4px; color: #fff; font-size: .78rem; font-weight: bold;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cal-more { font-size: .78rem; color: var(--muted); font-weight: bold; }
+.event-item { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); }
+.event-item:first-of-type { border-top: none; }
+.ev-time { min-width: 4.2em; font-weight: bold; font-size: 1.1rem; }
+.ev-body { flex: 1; min-width: 0; }
+.ev-body .title { font-size: 1.15rem; font-weight: bold; }
+.ev-body .text { white-space: pre-wrap; word-break: break-word; color: var(--muted); }
+.reminder { background: #fff3e0; border: 3px solid var(--orange); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 14px; }
+.reminder h3 { margin: 0 0 4px; }
 
 /* 月間評価・月間まとめ */
 .month-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -312,8 +346,11 @@ dialog h2 { margin: 0; }
 
 /* タブレット：タブは短い名前にする */
 @media (min-width: 761px) and (max-width: 1100px) {
+  .tabs { gap: 6px; }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 2px; font-size: 1rem; line-height: 1.3; }
+  .tab .ic { margin: 0; font-size: 1.4rem; }
   .tab .lb { display: none; }
-  .tab .lb-s { display: inline; }
+  .tab .lb-s { display: block; }
 }
 
 @media (max-width: 760px) {
@@ -342,6 +379,12 @@ dialog h2 { margin: 0; }
   dialog { padding: 14px; }
   .bar-row { grid-template-columns: 5.5em 1fr 3em; }
   .month-nav .btn { padding: 8px 10px; font-size: .95rem; }
+  .cal-grid { gap: 2px; }
+  .cal-cell { min-height: 64px; padding: 2px; }
+  .cal-ev { font-size: .65rem; padding: 0 2px; }
+  .cal-head { font-size: .85rem; }
+  .badge { top: 0; right: 2px; min-width: 18px; height: 18px; line-height: 18px; font-size: .7rem; }
+  .ev-time { min-width: 3.6em; font-size: 1rem; }
   .month-nav h2 { font-size: 1.2rem; }
   .media-item { width: 96px; height: 96px; }
 }
