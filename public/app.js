@@ -31,6 +31,7 @@ const state = {
   version: 0,
   form: { patientId: null, media: [] },
   uploading: 0,
+  formToken: 0, // 入力画面を開くたびに変わる（閉じたあとに届いた写真を別の記録に付けないため）
   openTrash: null,
   month: ymd(new Date()).slice(0, 7), // 月間評価・月間まとめで見ている月
   openMonthAll: new Set(), // 月間評価で「すべて見る」を開いている利用者
@@ -55,6 +56,15 @@ async function api(path, opts = {}) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || '通信に失敗しました');
   return data;
+}
+
+// ブラウザが保存を許可していないとき（Safari のプライベートなど）でも止まらないように
+function remember(key, value) {
+  try {
+    if (value === undefined) return localStorage.getItem(key) || '';
+    localStorage.setItem(key, value);
+  } catch {}
+  return '';
 }
 
 function esc(s) {
@@ -107,6 +117,7 @@ function patientName(id) {
 // 確認の画面（大きいボタンで「はい／いいえ」を選ぶ）
 function askConfirm(message) {
   const dlg = $('#confirm-dialog');
+  if (dlg.open) return Promise.resolve(false); // 2回押したときは2回目を無視
   $('#confirm-text').textContent = message;
   dlg.returnValue = '';
   dlg.showModal();
@@ -185,10 +196,10 @@ function currentQuery() {
     return { q, title };
   }
   const range = {
-    today: [daysAgo(0), '', '今日'],
+    today: [daysAgo(0), daysAgo(0), '今日'],
     yesterday: [daysAgo(1), daysAgo(1), '昨日'],
-    week: [daysAgo(6), '', 'この1週間'],
-    month: [daysAgo(30), '', 'この1か月'],
+    week: [daysAgo(6), daysAgo(0), 'この1週間'],
+    month: [daysAgo(30), daysAgo(0), 'この1か月'],
     all: ['', '', 'すべて'],
   }[state.range];
   let [from, to, label] = range;
@@ -690,10 +701,11 @@ function openNoteForm(note) {
     f.id.value = '';
     f.date.value = ymd(now);
     f.time.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    f.author.value = localStorage.getItem('author') || '';
+    f.author.value = remember('author');
     const pid = state.view === 'patient' && state.selectedPatient !== 'none' ? state.selectedPatient : null;
     state.form = { patientId: pid, media: [] };
   }
+  state.formToken++;
   renderFormChoices();
   $('#note-dialog').showModal();
 }
@@ -738,13 +750,16 @@ async function shrinkImage(file) {
 async function addFiles(files) {
   const prog = $('#nform-progress');
   const save = $('#nform-save');
+  const token = state.formToken;
   state.uploading++;
   save.disabled = true;
   prog.hidden = false;
   try {
     for (const file of files) {
       try {
-        state.form.media.push(await uploadFile(await shrinkImage(file)));
+        const uploaded = await uploadFile(await shrinkImage(file));
+        if (token !== state.formToken || !$('#note-dialog').open) break; // 入力画面はもう閉じられた
+        state.form.media.push(uploaded);
         renderFormChoices();
       } catch (e) {
         toast(e.message);
@@ -772,7 +787,7 @@ async function saveNote(e) {
     important: f.important.checked,
     media: state.form.media,
   };
-  localStorage.setItem('author', body.author);
+  remember('author', body.author);
   try {
     if (f.id.value) await api('notes/' + f.id.value, { method: 'PUT', body });
     else await api('notes', { method: 'POST', body });
@@ -995,10 +1010,10 @@ document.addEventListener('click', async (e) => {
     state.lists[b.dataset.more].count += PAGE;
     (b.dataset.more === 'date' ? loadDateView() : loadPatientView()).catch((err) => toast(err.message));
   } else if ((b = t('.media-item')) && !t('[data-remove]')) {
-    const src = b.dataset.src;
-    $('#viewer-body').innerHTML = b.dataset.type === 'video'
-      ? `<video src="${src}" controls autoplay playsinline></video>`
-      : `<img src="${src}" alt="">`;
+    const el = document.createElement(b.dataset.type === 'video' ? 'video' : 'img');
+    el.src = b.dataset.src;
+    if (b.dataset.type === 'video') Object.assign(el, { controls: true, autoplay: true, playsInline: true });
+    $('#viewer-body').replaceChildren(el);
     $('#viewer').showModal();
   }
 });

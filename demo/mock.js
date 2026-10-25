@@ -68,6 +68,9 @@
   let store;
   function start(db) {
     db.media = db.media || {};
+    // 入力画面で追加して「やめる」した写真が残らないように、どの記録にも使われていない写真を消す
+    const used = new Set((db.notes || []).flatMap((n) => n.media.map((m) => m.file)));
+    for (const f of Object.keys(db.media)) if (!used.has(f)) delete db.media[f];
     store = KaigoStore.createStore({
       db,
       mediaExists: (f) => Boolean(db.media[f] || memoryMedia.has(f)),

@@ -45,9 +45,27 @@ const UPLOAD_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.heic', '
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
+// db.json が壊れていたら、いちばん新しいバックアップから読み込む（壊れたファイルは名前を変えて残す）
 function loadDb() {
   if (!fs.existsSync(DB_FILE)) return {};
-  return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+  try {
+    return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+  } catch (err) {
+    const broken = `${DB_FILE}.broken-${Date.now()}`;
+    fs.renameSync(DB_FILE, broken);
+    console.log(`  [!] db.json rusak dan disimpan sebagai ${path.basename(broken)}.`);
+    const backups = fs.existsSync(BACKUP_DIR) ? fs.readdirSync(BACKUP_DIR).filter((f) => f.startsWith('db-')).sort().reverse() : [];
+    for (const f of backups) {
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(BACKUP_DIR, f), 'utf8'));
+        console.log(`      Data dipulihkan dari backup ${f}.`);
+        fs.copyFileSync(path.join(BACKUP_DIR, f), DB_FILE);
+        return data;
+      } catch {}
+    }
+    console.log('      Tidak ada backup yang bisa dipakai. Mulai dengan data kosong.');
+    return {};
+  }
 }
 
 const store = createStore({
@@ -124,6 +142,12 @@ function readJson(req) {
   });
 }
 
+// ファイルが途中で消えても、サーバー全体が止まらないようにする
+function pipeFile(stream, res) {
+  stream.on('error', () => res.destroy());
+  stream.pipe(res);
+}
+
 function serveFile(req, res, filePath, extraHeaders = {}) {
   fs.stat(filePath, (err, stat) => {
     if (err || !stat.isFile()) return sendJson(res, 404, { error: '見つかりません' });
@@ -149,10 +173,10 @@ function serveFile(req, res, filePath, extraHeaders = {}) {
         'Accept-Ranges': 'bytes',
         ...extraHeaders,
       });
-      return fs.createReadStream(filePath, { start, end }).pipe(res);
+      return pipeFile(fs.createReadStream(filePath, { start, end }), res);
     }
     res.writeHead(200, { 'Content-Type': type, 'Content-Length': stat.size, 'Accept-Ranges': 'bytes', ...extraHeaders });
-    fs.createReadStream(filePath).pipe(res);
+    pipeFile(fs.createReadStream(filePath), res);
   });
 }
 
@@ -200,6 +224,12 @@ async function handleApi(req, res, url) {
         sendJson(res, 413, { error: 'ファイルが大きすぎます（100MBまで）' });
       }
     });
+    // 途中で通信が切れたら、書きかけのファイルを消す
+    req.on('aborted', () => {
+      failed = true;
+      out.destroy();
+      fs.unlink(target, () => {});
+    });
     req.pipe(out);
     out.on('finish', () => {
       if (failed) return;
@@ -239,16 +269,41 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+// 家や施設の Wi-Fi でよく使うアドレス（192.168.x.x）を先に出す
 function lanAddresses() {
+  const rank = (ip) => (ip.startsWith('192.168.') ? 0 : ip.startsWith('10.') ? 1 : 2);
   return Object.values(os.networkInterfaces())
     .flat()
-    .filter((i) => i && i.family === 'IPv4' && !i.internal)
-    .map((i) => i.address);
+    .filter((i) => i && i.family === 'IPv4' && !i.internal && !i.address.startsWith('169.254.'))
+    .map((i) => i.address)
+    .sort((a, b) => rank(a) - rank(b));
+}
+
+// 入力画面で写真を追加して「やめる」と、どの記録にも使われない写真が残るので、1日たったら消す
+function removeOrphanUploads() {
+  const used = new Set(store.db.notes.flatMap((n) => n.media.map((m) => m.file)));
+  const dayAgo = Date.now() - 86400000;
+  for (const f of fs.readdirSync(UPLOAD_DIR)) {
+    if (used.has(f)) continue;
+    const full = path.join(UPLOAD_DIR, f);
+    try {
+      if (fs.statSync(full).mtimeMs < dayAgo) fs.unlinkSync(full);
+    } catch {}
+  }
+}
+
+function housekeeping() {
+  try {
+    store.purgeExpiredTrash();
+    removeOrphanUploads();
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 dailyBackup();
-store.purgeExpiredTrash();
-setInterval(store.purgeExpiredTrash, 60 * 60 * 1000);
+housekeeping();
+setInterval(housekeeping, 60 * 60 * 1000);
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.log('');
