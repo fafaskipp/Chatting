@@ -248,6 +248,11 @@ const server = http.createServer(async (req, res) => {
       return serveFile(req, res, path.join(UPLOAD_DIR, file), { 'Cache-Control': 'max-age=31536000, immutable' });
     }
 
+    // ユニットえらびのページ（どのユニットのサーバーからでも開ける）
+    if (url.pathname === '/launcher' || url.pathname === '/launcher/') {
+      return serveFile(req, res, path.join(ROOT, 'launcher', 'index.html'), { 'Cache-Control': 'no-cache' });
+    }
+
     let rel = decodeURIComponent(url.pathname);
     if (rel === '/') rel = '/index.html';
     const filePath = path.normalize(path.join(PUBLIC_DIR, rel));

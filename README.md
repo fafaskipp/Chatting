@@ -40,3 +40,11 @@ Port, lokasi data, dan jumlah slot bisa diganti: `PORT=8080 DATA_DIR=D:\kaigo-da
 
 ## Versi demo (iPad / tanpa server)
 `node demo/build.js` membuat `demo/kaigo-demo.html`: satu file yang berjalan langsung di browser tanpa server, berisi contoh data. Data hanya tersimpan di browser perangkat itu. Cetak dan berbagi antar-perangkat tidak tersedia di versi demo.
+
+## Halaman pilih unit (`launcher/index.html`)
+Halaman sederhana dengan 8 tombol unit (モモの木・うめの木・かきの木・びわの木・なしの木・ゆずの木・みかん・りんご) yang membuka 介護日記 masing-masing unit.
+- Tab **🍎 ひらく**: tekan tombol unit → 介護日記 unit itu terbuka di tab baru.
+- Tab **⚙️ リンク設定**: isi alamat tiap unit (misalnya `http://192.168.1.10:3000`; `http://` boleh tidak ditulis). Tersimpan otomatis di perangkat itu. Untuk menyalin pengaturan ke perangkat lain, pakai kode di bagian「📲 ほかの端末にも同じ設定を入れる」.
+- Cara membuka: klik dua kali file `launcher/index.html` di komputer, **atau** buka `http://ALAMAT-IP:3000/launcher` dari server 介護日記 unit mana pun (cara ini yang paling mudah untuk iPad/HP).
+- Kalau ingin alamat sudah terisi di semua perangkat tanpa input, isi `url: ''` di bagian `UNITS` di dalam file itu.
+
