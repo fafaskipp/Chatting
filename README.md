@@ -48,3 +48,7 @@ Halaman sederhana dengan 8 tombol unit (モモの木・うめの木・かきの�
 - Cara membuka: klik dua kali file `launcher/index.html` di komputer, **atau** buka `http://ALAMAT-IP:3000/launcher` dari server 介護日記 unit mana pun (cara ini yang paling mudah untuk iPad/HP).
 - Kalau ingin alamat sudah terisi di semua perangkat tanpa input, isi `url: ''` di bagian `UNITS` di dalam file itu.
 
+## Panduan untuk staf (`docs/`)
+- `docs/guide-ja.pdf` — **panduan A4 dua halaman dalam bahasa Jepang** (pengenalan + cara pakai + aturan bersama). Cetak dan tempel di dekat komputer unit. Isi kolom alamat dan nama penanggung jawab dengan pulpen.
+- `docs/guide-ja.html` — file yang sama dalam bentuk HTML (buka di browser, cetak dengan Ctrl+P / pilih「PDFに保存」).
+
