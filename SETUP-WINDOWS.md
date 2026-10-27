@@ -55,6 +55,12 @@ Internet hanya dibutuhkan di **Langkah 1 dan 2** (download). Setelah itu aplikas
 
 Alamat yang sama juga tertulis di aplikasi: tab **⚙️ 管理** → paling bawah.
 
+### Langkah 5b — Buat ikon 「📒 介護日記」 untuk staf (sekali per perangkat)
+Manual untuk staf (`docs/manual-ja.pdf`) dimulai dengan「tekan ikon 介護日記」, jadi pasang ikonnya dulu:
+- **Komputer Windows (selain server):** klik kanan di Desktop → **New → Shortcut** → ketik alamat unit, misalnya `http://192.168.1.10:3000` → **Next** → beri nama `介護日記` → **Finish**.
+- **iPad / iPhone (Safari):** buka alamatnya → tombol Share → **Add to Home Screen** → nama `介護日記`.
+- **Android (Chrome):** buka alamatnya → menu ⋮ → **Add to Home screen**.
+
 ## Langkah 6 — Mulai dipakai
 
 1. Tab **⚙️ 管理** → daftarkan pasien dengan「＋ ここに登録する」.

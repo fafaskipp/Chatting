@@ -51,4 +51,6 @@ Halaman sederhana dengan 8 tombol unit (モモの木・うめの木・かきの�
 ## Panduan untuk staf (`docs/`)
 - `docs/guide-ja.pdf` — **panduan A4 dua halaman dalam bahasa Jepang** (pengenalan + cara pakai + aturan bersama). Cetak dan tempel di dekat komputer unit. Isi kolom alamat dan nama penanggung jawab dengan pulpen.
 - `docs/guide-ja.html` — file yang sama dalam bentuk HTML (buka di browser, cetak dengan Ctrl+P / pilih「PDFに保存」).
+- `docs/manual-ja.pdf` — **manual cara pakai 20 halaman dengan huruf besar, untuk orang yang belum biasa memakai komputer**. Satu halaman satu tindakan, screenshot diberi tanda merah dan nomor「ここを押す」, ada halaman「こまったとき」dan「やくそく」. Cetak A4, jilid, dan taruh di dekat komputer. Isi kolom nama unit, orang yang bisa ditanya, dan kontak di sampul dan halaman terakhir. Sebelum dipakai, pasang ikon 介護日記 di tiap perangkat (SETUP-WINDOWS.md → Langkah 5b).
+- `docs/manual-ja.html` — isi yang sama dalam bentuk HTML.
 
