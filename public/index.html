@@ -50,6 +50,7 @@
         <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
       </div>
       <div id="date-list" class="list"></div>
+      <div id="neighbor" class="no-print"></div>
     </section>
 
     <!-- 利用者で見る -->
@@ -130,9 +131,18 @@
       <form id="unit-form" class="card">
         <h2 style="margin-top:0">🏠 ユニット・部屋の名前</h2>
         <p class="sub-hint" style="margin-bottom:10px">画面のいちばん上に出る名前です。ユニットや部屋ごとに変えてください。</p>
-        <div class="row">
-          <label>名前 <input name="unitName" maxlength="40" placeholder="例：さくらユニット、2階東"></label>
-          <button type="submit" class="btn btn-save" style="flex:0 0 auto">💾 保存する</button>
+        <label>名前 <input name="unitName" maxlength="40" placeholder="例：さくらユニット、2階東"></label>
+
+        <h2 style="margin-top:22px">🌙 となりのユニット（夜勤）</h2>
+        <p class="sub-hint" style="margin-bottom:10px">夜勤で2つのユニットを見るときに使います。ここに入れると、「📅 日付」の画面のいちばん下に、となりのユニットのボタンが出ます。今日の記録を見終わってから、押します。使わないときは、空のままで大丈夫です。</p>
+        <div class="form">
+          <label>となりのユニットの名前 <input name="neighborName" maxlength="40" placeholder="例：うめの木"></label>
+          <label>となりのユニットの記録を見るアドレス <input name="neighborUrl" type="text" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" maxlength="200" placeholder="例：http://192.168.1.11:3000"></label>
+          <p class="sub-hint" style="margin:0">アドレスは、となりのユニットのパソコンの黒い画面か、そのユニットの「⚙️ 管理」のいちばん下に出ています。</p>
+          <div class="actions">
+            <button type="submit" class="btn btn-save">💾 保存する</button>
+            <button type="button" class="btn btn-gray" id="neighbor-test">🔗 ひらいてみる</button>
+          </div>
         </div>
       </form>
       <p class="hint">利用者は <b id="slot-count">10</b> 人まで登録できます。退所・ご逝去のときは「🗑 削除」を押すと、その枠が「空き」になり、新しい方を登録できます。<br>削除した方の記録はゴミ箱に残り、あとから元に戻せます。</p>

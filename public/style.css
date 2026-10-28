@@ -392,3 +392,14 @@ dialog h2 { margin: 0; }
   .media-item { width: 90px; height: 90px; background: #fff; }
   .media-item .play { color: #000; text-shadow: none; }
 }
+
+/* となりのユニット（夜勤）：日付の画面のいちばん下 */
+.neighbor { margin: 26px 0 8px; padding: 16px; border: 3px dashed #3949ab; border-radius: var(--radius); background: #eef0fb; text-align: center; }
+.neighbor p { margin: 0 0 10px; font-weight: bold; color: #283593; }
+.neighbor-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 68px; padding: 12px 18px; border-radius: var(--radius);
+  background: #283593; color: #fff; font-size: 1.3rem; font-weight: bold; text-decoration: none; box-shadow: 0 4px 0 #1a237e;
+}
+.neighbor-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #1a237e; }
+.neighbor-btn:focus-visible { outline: 3px solid #f2b705; outline-offset: 3px; }
+

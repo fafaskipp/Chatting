@@ -27,6 +27,8 @@ const state = {
   selectedPatient: null,
   patients: [],
   unitName: '', // ⚙️ 管理で設定するユニット・部屋の名前
+  neighborName: '', // 夜勤で見る、となりのユニットの名前とアドレス
+  neighborUrl: '',
   categories: Object.keys(CATEGORY_COLORS),
   slots: 10,
   version: 0,
@@ -118,6 +120,18 @@ function appName() {
 function renderUnitName() {
   $('#unit-name').textContent = appName();
   document.title = appName();
+}
+
+// 「日付」の画面のいちばん下：となりのユニットのボタン（夜勤で2ユニットを見るとき）
+function renderNeighbor() {
+  const box = $('#neighbor');
+  if (!state.neighborUrl) {
+    box.innerHTML = '';
+    return;
+  }
+  const name = state.neighborName || 'となりのユニット';
+  box.innerHTML = `<div class="neighbor"><p>🌙 今日の記録を ぜんぶ見たら、つぎは となりのユニット</p>
+    <a class="neighbor-btn" href="${esc(state.neighborUrl)}" target="_blank" rel="noopener">「${esc(name)}」の記録を見る ▶</a></div>`;
 }
 
 function patientName(id) {
@@ -825,6 +839,9 @@ async function refresh() {
     state.patients = patients;
     state.categories = categories;
     state.unitName = settings.unitName || '';
+    state.neighborName = settings.neighborName || '';
+    state.neighborUrl = settings.neighborUrl || '';
+    renderNeighbor();
     renderUnitName();
     renderCategoryFilter();
     await loadReminders();
@@ -835,8 +852,12 @@ async function refresh() {
     else if (state.view === 'cal') await loadCalendar();
     else if (state.view === 'manage') {
       renderSlots();
-      const input = $('#unit-form').unitName;
-      if (document.activeElement !== input) input.value = state.unitName;
+      const f = $('#unit-form');
+      if (!f.contains(document.activeElement)) {
+        f.unitName.value = state.unitName;
+        f.neighborName.value = state.neighborName;
+        f.neighborUrl.value = state.neighborUrl;
+      }
     }
     else await loadTrash();
   } catch (e) {
@@ -1060,10 +1081,23 @@ $('#note-form').addEventListener('click', (e) => {
 });
 
 // 利用者の管理
+// アドレスをまちがえていないか、ためしに開く
+$('#neighbor-test').addEventListener('click', () => {
+  let url = $('#unit-form').neighborUrl.value.trim();
+  if (!url) return toast('アドレスを入れてください');
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) url = 'http://' + url;
+  if (!/^https?:\/\//i.test(url)) return toast('アドレスが正しくありません');
+  window.open(url, '_blank', 'noopener');
+});
 $('#unit-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
-    await api('settings', { method: 'PUT', body: { unitName: e.target.unitName.value } });
+    const f = e.target;
+    const saved = await api('settings', { method: 'PUT', body: { unitName: f.unitName.value, neighborName: f.neighborName.value, neighborUrl: f.neighborUrl.value } });
+    // 保存された形（http:// を補ったもの）を入力欄にも反映する
+    f.unitName.value = saved.unitName;
+    f.neighborName.value = saved.neighborName;
+    f.neighborUrl.value = saved.neighborUrl;
     toast('保存しました ✅');
     refresh();
   } catch (err) {

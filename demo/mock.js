@@ -46,7 +46,7 @@
       ev('e4', 2, '', '入浴日', 'p2', 'weekly'),
       ev('e5', -9, '13:30', '歯科の訪問診療', 'p5'),
     ];
-    return { patients, notes, events, settings: { unitName: 'さくらユニット' }, media: {}, version: 1 };
+    return { patients, notes, events, settings: { unitName: 'さくらユニット', neighborName: 'うめの木', neighborUrl: 'http://192.168.1.11:3000/' }, media: {}, version: 1 };
   }
 
   function load() {
