@@ -122,24 +122,15 @@ function renderUnitName() {
   document.title = appName();
 }
 
-// となりのユニット（夜勤で2ユニットを見るとき）
-// ・いちばん下：記録を見おわったあとに押す、大きな「夜」のカード
-// ・いちばん上：そこまで一気に下がるボタン（長い一覧でも見つけられるように）
+// となりのユニット（夜勤で2ユニットを見るとき）：「日付」の画面のいちばん下のボタン
 function renderNeighbor() {
   const box = $('#neighbor');
-  const jump = $('#neighbor-jump');
   if (!state.neighborUrl) {
     box.innerHTML = '';
-    jump.innerHTML = '';
     return;
   }
   const name = state.neighborName || 'となりのユニット';
-  box.innerHTML = `<div class="neighbor">
-      <div class="nb-head"><span class="nb-moon" aria-hidden="true">🌙</span>
-        <div><div class="nb-sub">この画面の記録を 見おわったら</div><div class="nb-title">つぎは となりのユニット</div></div></div>
-      <a class="neighbor-btn" href="${esc(state.neighborUrl)}" target="_blank" rel="noopener"><span class="nb-name">${esc(name)}</span><span>の記録を見る ▶</span></a>
-    </div>`;
-  jump.innerHTML = `<button type="button" class="neighbor-jump" data-neighbor-jump>🌙 夜勤：となりの「${esc(name)}」は いちばん下です <span class="arrow" aria-hidden="true">⬇</span></button>`;
+  box.innerHTML = `<a class="neighbor-btn" href="${esc(state.neighborUrl)}" target="_blank" rel="noopener">${esc(name)}の記録を見る ▶</a>`;
 }
 
 function patientName(id) {
@@ -979,18 +970,6 @@ $('#eform-delete').addEventListener('click', async () => {
   } catch (err) {
     toast(err.message);
   }
-});
-
-// 「となりのユニット」のカードまで下がる
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('[data-neighbor-jump]')) return;
-  const card = $('#neighbor .neighbor');
-  if (!card) return;
-  const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  card.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
-  card.classList.remove('pulse');
-  void card.offsetWidth;
-  card.classList.add('pulse');
 });
 
 // 月間評価・月間まとめ：月の切りかえと「すべて見る」
