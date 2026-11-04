@@ -127,7 +127,7 @@ function readJson(req) {
     req.on('data', (c) => {
       size += c.length;
       if (size > MAX_JSON_BYTES) {
-        reject(Object.assign(new Error('データが大きすぎます'), { status: 413 }));
+        reject(Object.assign(new Error('データが大きすぎます'), { status: 413, code: 'tooLarge' }));
         req.destroy();
       } else chunks.push(c);
     });
@@ -135,7 +135,7 @@ function readJson(req) {
       try {
         resolve(chunks.length ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : {});
       } catch {
-        reject(Object.assign(new Error('データの形式が正しくありません'), { status: 400 }));
+        reject(Object.assign(new Error('データの形式が正しくありません'), { status: 400, code: 'badJson' }));
       }
     });
     req.on('error', reject);
@@ -150,7 +150,7 @@ function pipeFile(stream, res) {
 
 function serveFile(req, res, filePath, extraHeaders = {}) {
   fs.stat(filePath, (err, stat) => {
-    if (err || !stat.isFile()) return sendJson(res, 404, { error: '見つかりません' });
+    if (err || !stat.isFile()) return sendJson(res, 404, { error: '見つかりません', code: 'notFound' });
     const type = MIME[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
     const range = req.headers.range;
     // 動画の再生位置移動のために Range に対応
@@ -195,10 +195,10 @@ async function handleApi(req, res, url) {
   if (resource === 'upload' && method === 'POST') {
     const original = decodeURIComponent(String(req.headers['x-filename'] || 'file'));
     let ext = path.extname(original).toLowerCase();
-    if (!UPLOAD_EXT.has(ext)) return sendJson(res, 400, { error: 'この種類のファイルは使えません（写真か動画を選んでください）' });
+    if (!UPLOAD_EXT.has(ext)) return sendJson(res, 400, { error: 'この種類のファイルは使えません（写真か動画を選んでください）', code: 'badFileType' });
     if (ext === '.jpeg') ext = '.jpg';
     const length = Number(req.headers['content-length'] || 0);
-    if (length > MAX_UPLOAD_BYTES) return sendJson(res, 413, { error: 'ファイルが大きすぎます（100MBまで）' });
+    if (length > MAX_UPLOAD_BYTES) return sendJson(res, 413, { error: 'ファイルが大きすぎます（100MBまで）', code: 'fileTooBig' });
     const file = `${Date.now()}-${newId()}${ext}`;
     const target = path.join(UPLOAD_DIR, file);
     const out = fs.createWriteStream(target);
@@ -211,7 +211,7 @@ async function handleApi(req, res, url) {
         req.unpipe(out);
         out.destroy();
         fs.unlink(target, () => {});
-        sendJson(res, 413, { error: 'ファイルが大きすぎます（100MBまで）' });
+        sendJson(res, 413, { error: 'ファイルが大きすぎます（100MBまで）', code: 'fileTooBig' });
       }
     });
     // 途中で通信が切れたら、書きかけのファイルを消す
@@ -227,7 +227,7 @@ async function handleApi(req, res, url) {
       sendJson(res, 201, { file, type });
     });
     out.on('error', () => {
-      if (!failed) sendJson(res, 500, { error: '保存に失敗しました' });
+      if (!failed) sendJson(res, 500, { error: '保存に失敗しました', code: 'saveFailed' });
     });
     return;
   }
@@ -256,10 +256,14 @@ const server = http.createServer(async (req, res) => {
     let rel = decodeURIComponent(url.pathname);
     if (rel === '/') rel = '/index.html';
     const filePath = path.normalize(path.join(PUBLIC_DIR, rel));
-    if (!filePath.startsWith(PUBLIC_DIR + path.sep)) return sendJson(res, 403, { error: '禁止されています' });
+    if (!filePath.startsWith(PUBLIC_DIR + path.sep)) return sendJson(res, 403, { error: '禁止されています', code: 'forbidden' });
     return serveFile(req, res, filePath, { 'Cache-Control': 'no-cache' });
   } catch (err) {
-    if (!res.headersSent) sendJson(res, err.status || 500, { error: err.status ? err.message : 'サーバーでエラーが起きました' });
+    if (!res.headersSent) {
+      sendJson(res, err.status || 500, err.status
+        ? { error: err.message, code: err.code, params: err.params }
+        : { error: 'サーバーでエラーが起きました', code: 'server' });
+    }
     if (!err.status) console.error(err);
   }
 });

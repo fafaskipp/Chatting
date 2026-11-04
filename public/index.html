@@ -9,17 +9,20 @@
 <body>
   <header class="topbar">
     <h1>📒 <span id="unit-name">介護日記</span></h1>
-    <button id="btn-new" class="btn btn-new">＋ 記録を書く</button>
+    <div class="topbar-actions">
+      <button id="btn-lang" class="btn btn-lang" type="button" data-i18n-aria="btn.lang">🌐 <span id="lang-code">JA</span></button>
+      <button id="btn-new" class="btn btn-new" data-i18n="btn.new">＋ 記録を書く</button>
+    </div>
   </header>
 
   <nav class="tabs" role="tablist">
-    <button class="tab active" data-view="date" role="tab"><span class="ic">📅</span><span class="lb">日付</span></button>
-    <button class="tab" data-view="patient" role="tab"><span class="ic">👤</span><span class="lb">利用者</span></button>
-    <button class="tab" data-view="cal" role="tab"><span class="ic">🗓</span><span class="lb">予定</span><span class="badge" id="cal-badge" hidden></span></button>
-    <button class="tab" data-view="report" role="tab"><span class="ic">📝</span><span class="lb">評価</span></button>
-    <button class="tab" data-view="summary" role="tab"><span class="ic">📊</span><span class="lb">まとめ</span></button>
-    <button class="tab" data-view="manage" role="tab"><span class="ic">⚙️</span><span class="lb">管理</span></button>
-    <button class="tab" data-view="trash" role="tab"><span class="ic">🗑</span><span class="lb">ゴミ箱</span></button>
+    <button class="tab active" data-view="date" role="tab"><span class="ic">📅</span><span class="lb" data-i18n="tab.date">日付</span></button>
+    <button class="tab" data-view="patient" role="tab"><span class="ic">👤</span><span class="lb" data-i18n="tab.patient">利用者</span></button>
+    <button class="tab" data-view="cal" role="tab"><span class="ic">🗓</span><span class="lb" data-i18n="tab.cal">予定</span><span class="badge" id="cal-badge" hidden></span></button>
+    <button class="tab" data-view="report" role="tab"><span class="ic">📝</span><span class="lb" data-i18n="tab.report">評価</span></button>
+    <button class="tab" data-view="summary" role="tab"><span class="ic">📊</span><span class="lb" data-i18n="tab.summary">まとめ</span></button>
+    <button class="tab" data-view="manage" role="tab"><span class="ic">⚙️</span><span class="lb" data-i18n="tab.manage">管理</span></button>
+    <button class="tab" data-view="trash" role="tab"><span class="ic">🗑</span><span class="lb" data-i18n="tab.trash">ゴミ箱</span></button>
   </nav>
 
   <main>
@@ -30,24 +33,24 @@
       <div id="reminder"></div>
       <div class="filters">
         <div class="quick">
-          <button class="chip-btn active" data-range="today">今日</button>
-          <button class="chip-btn" data-range="yesterday">昨日</button>
-          <button class="chip-btn" data-range="week">1週間</button>
-          <button class="chip-btn" data-range="month">1か月</button>
-          <button class="chip-btn" data-range="all">すべて</button>
+          <button class="chip-btn active" data-range="today" data-i18n="range.today">今日</button>
+          <button class="chip-btn" data-range="yesterday" data-i18n="range.yesterday">昨日</button>
+          <button class="chip-btn" data-range="week" data-i18n="range.week">1週間</button>
+          <button class="chip-btn" data-range="month" data-i18n="range.month">1か月</button>
+          <button class="chip-btn" data-range="all" data-i18n="range.all">すべて</button>
         </div>
-        <label class="check"><input type="checkbox" id="date-important"> ⭐ 重要だけ</label>
+        <label class="check"><input type="checkbox" id="date-important"> <span data-i18n="date.importantOnly">⭐ 重要だけ</span></label>
         <details id="date-more">
-          <summary>🔍 詳しく探す</summary>
+          <summary data-i18n="date.more">🔍 詳しく探す</summary>
           <div class="row">
-            <label>日付をえらぶ <input type="date" id="date-pick"></label>
-            <label>種類 <select id="date-category"><option value="">すべての種類</option></select></label>
-            <label>ことばで探す <input type="search" id="date-search" placeholder="例：転倒、発熱"></label>
+            <label><span data-i18n="date.pick">日付をえらぶ</span> <input type="date" id="date-pick"></label>
+            <label><span data-i18n="date.category">種類</span> <select id="date-category"><option value="">すべての種類</option></select></label>
+            <label><span data-i18n="date.search">ことばで探す</span> <input type="search" id="date-search" data-i18n-ph="date.searchPh" placeholder="例：転倒、発熱"></label>
           </div>
         </details>
       </div>
       <div class="toolbar">
-        <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
+        <button class="btn btn-print" data-print data-i18n="btn.print">🖨 印刷・PDF</button>
       </div>
       <div id="date-list" class="list"></div>
       <div id="neighbor" class="no-print"></div>
@@ -56,20 +59,20 @@
     <!-- 利用者で見る -->
     <section id="view-patient" class="view" hidden>
       <div class="filters">
-        <label>名前で探す <input type="search" id="patient-search" placeholder="名前 または ふりがな"></label>
+        <label><span data-i18n="patient.searchLabel">名前で探す</span> <input type="search" id="patient-search" data-i18n-ph="patient.searchPh" placeholder="名前 または ふりがな"></label>
         <div id="patient-buttons" class="patient-grid"></div>
       </div>
       <div id="patient-head"></div>
       <div id="patient-toolbar" hidden>
         <div class="filters">
           <div class="month-nav">
-            <button type="button" class="btn btn-gray" data-month="-1">◀ 前の月</button>
+            <button type="button" class="btn btn-gray" data-month="-1" data-i18n="btn.prevMonth">◀ 前の月</button>
             <h2 class="month-label"></h2>
-            <button type="button" class="btn btn-gray" data-month="1">次の月 ▶</button>
+            <button type="button" class="btn btn-gray" data-month="1" data-i18n="btn.nextMonth">次の月 ▶</button>
           </div>
         </div>
         <div class="toolbar">
-          <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
+          <button class="btn btn-print" data-print data-i18n="btn.print">🖨 印刷・PDF</button>
         </div>
       </div>
       <div id="patient-list" class="list"></div>
@@ -79,18 +82,18 @@
     <section id="view-cal" class="view" hidden>
       <div class="filters">
         <div class="month-nav">
-          <button type="button" class="btn btn-gray" data-cal="-1">◀ 前の月</button>
+          <button type="button" class="btn btn-gray" data-cal="-1" data-i18n="btn.prevMonth">◀ 前の月</button>
           <h2 id="cal-label"></h2>
-          <button type="button" class="btn btn-gray" data-cal="1">次の月 ▶</button>
+          <button type="button" class="btn btn-gray" data-cal="1" data-i18n="btn.nextMonth">次の月 ▶</button>
         </div>
         <div class="cal-actions">
-          <button type="button" class="btn btn-gray" data-cal="0">今日にもどる</button>
-          <button type="button" class="btn btn-new" data-eadd="">＋ 予定を入れる</button>
+          <button type="button" class="btn btn-gray" data-cal="0" data-i18n="cal.today">今日にもどる</button>
+          <button type="button" class="btn btn-new" data-eadd="" data-i18n="cal.add">＋ 予定を入れる</button>
         </div>
       </div>
       <div class="cal-grid" id="cal-grid"></div>
       <div id="cal-day"></div>
-      <h2>📋 この月の予定</h2>
+      <h2 data-i18n="cal.monthList">📋 この月の予定</h2>
       <div id="cal-list"></div>
     </section>
 
@@ -98,14 +101,14 @@
     <section id="view-report" class="view" hidden>
       <div class="filters">
         <div class="month-nav">
-          <button type="button" class="btn btn-gray" data-month="-1">◀ 前の月</button>
+          <button type="button" class="btn btn-gray" data-month="-1" data-i18n="btn.prevMonth">◀ 前の月</button>
           <h2 class="month-label"></h2>
-          <button type="button" class="btn btn-gray" data-month="1">次の月 ▶</button>
+          <button type="button" class="btn btn-gray" data-month="1" data-i18n="btn.nextMonth">次の月 ▶</button>
         </div>
-        <p class="sub-hint">この月に起きたことを、利用者ごとに表示します。日々の記録から自動で集めるので、入力はいりません。</p>
+        <p class="sub-hint" data-i18n="report.hint">この月に起きたことを、利用者ごとに表示します。日々の記録から自動で集めるので、入力はいりません。</p>
       </div>
       <div class="toolbar">
-        <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
+        <button class="btn btn-print" data-print data-i18n="btn.print">🖨 印刷・PDF</button>
       </div>
       <div id="rep-body"></div>
     </section>
@@ -114,14 +117,14 @@
     <section id="view-summary" class="view" hidden>
       <div class="filters">
         <div class="month-nav">
-          <button type="button" class="btn btn-gray" data-month="-1">◀ 前の月</button>
+          <button type="button" class="btn btn-gray" data-month="-1" data-i18n="btn.prevMonth">◀ 前の月</button>
           <h2 class="month-label"></h2>
-          <button type="button" class="btn btn-gray" data-month="1">次の月 ▶</button>
+          <button type="button" class="btn btn-gray" data-month="1" data-i18n="btn.nextMonth">次の月 ▶</button>
         </div>
-        <label style="margin-top:10px">利用者 <select id="sum-patient"></select></label>
+        <label style="margin-top:10px"><span data-i18n="summary.person">利用者</span> <select id="sum-patient"></select></label>
       </div>
       <div class="toolbar">
-        <button class="btn btn-print" data-print>🖨 印刷・PDF</button>
+        <button class="btn btn-print" data-print data-i18n="btn.print">🖨 印刷・PDF</button>
       </div>
       <div id="sum-body"></div>
     </section>
@@ -129,30 +132,30 @@
     <!-- 利用者の管理（枠） -->
     <section id="view-manage" class="view" hidden>
       <form id="unit-form" class="card">
-        <h2 style="margin-top:0">🏠 ユニット・部屋の名前</h2>
-        <p class="sub-hint" style="margin-bottom:10px">画面のいちばん上に出る名前です。ユニットや部屋ごとに変えてください。</p>
-        <label>名前 <input name="unitName" maxlength="40" placeholder="例：さくらユニット、2階東"></label>
+        <h2 style="margin-top:0" data-i18n="unit.title">🏠 ユニット・部屋の名前</h2>
+        <p class="sub-hint" style="margin-bottom:10px" data-i18n="unit.hint">画面のいちばん上に出る名前です。ユニットや部屋ごとに変えてください。</p>
+        <label><span data-i18n="unit.name">名前</span> <input name="unitName" maxlength="40" data-i18n-ph="unit.namePh" placeholder="例：さくらユニット、2階東"></label>
 
-        <h2 style="margin-top:22px">🌙 となりのユニット（夜勤）</h2>
-        <p class="sub-hint" style="margin-bottom:10px">夜勤で2つのユニットを見るときに使います。ここに入れると、「📅 日付」の画面のいちばん下に、となりのユニットのボタンが出ます。今日の記録を見終わってから、押します。使わないときは、空のままで大丈夫です。</p>
+        <h2 style="margin-top:22px" data-i18n="nb.title">🌙 となりのユニット（夜勤）</h2>
+        <p class="sub-hint" style="margin-bottom:10px" data-i18n="nb.hint">夜勤で2つのユニットを見るときに使います。ここに入れると、「📅 日付」の画面のいちばん下に、となりのユニットのボタンが出ます。今日の記録を見終わってから、押します。使わないときは、空のままで大丈夫です。</p>
         <div class="form">
-          <label>となりのユニットの名前 <input name="neighborName" maxlength="40" placeholder="例：うめの木"></label>
-          <label>となりのユニットの記録を見るアドレス <input name="neighborUrl" type="text" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" maxlength="200" placeholder="例：http://192.168.1.11:3000"></label>
-          <p class="sub-hint" style="margin:0">アドレスは、となりのユニットのパソコンの黒い画面か、そのユニットの「⚙️ 管理」のいちばん下に出ています。</p>
+          <label><span data-i18n="nb.name">となりのユニットの名前</span> <input name="neighborName" maxlength="40" data-i18n-ph="nb.namePh" placeholder="例：うめの木"></label>
+          <label><span data-i18n="nb.url">となりのユニットの記録を見るアドレス</span> <input name="neighborUrl" type="text" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" maxlength="200" data-i18n-ph="nb.urlPh" placeholder="例：http://192.168.1.11:3000"></label>
+          <p class="sub-hint" style="margin:0" data-i18n="nb.urlHint">アドレスは、となりのユニットのパソコンの黒い画面か、そのユニットの「⚙️ 管理」のいちばん下に出ています。</p>
           <div class="actions">
-            <button type="submit" class="btn btn-save">💾 保存する</button>
-            <button type="button" class="btn btn-gray" id="neighbor-test">🔗 ひらいてみる</button>
+            <button type="submit" class="btn btn-save" data-i18n="btn.save">💾 保存する</button>
+            <button type="button" class="btn btn-gray" id="neighbor-test" data-i18n="nb.test">🔗 ひらいてみる</button>
           </div>
         </div>
       </form>
-      <p class="hint">利用者は <b id="slot-count">10</b> 人まで登録できます。退所・ご逝去のときは「🗑 削除」を押すと、その枠が「空き」になり、新しい方を登録できます。<br>削除した方の記録はゴミ箱に残り、あとから元に戻せます。</p>
+      <p class="hint" id="slot-hint"></p>
       <div id="slot-list" class="slot-grid"></div>
       <div id="server-info" class="info"></div>
     </section>
 
     <!-- ゴミ箱 -->
     <section id="view-trash" class="view" hidden>
-      <p class="hint">消したものはここに入ります。「↩️ 元に戻す」で戻せます。<br>ゴミ箱の中身は <b><span id="trash-days">30</span>日後に自動で完全に消えます</b>。</p>
+      <p class="hint" id="trash-hint"></p>
       <div id="trash-body"></div>
     </section>
   </main>
@@ -160,44 +163,44 @@
   <!-- 記録の入力画面 -->
   <dialog id="note-dialog">
     <form id="note-form" class="form" method="dialog">
-      <h2 id="nform-title" tabindex="-1" autofocus>記録を書く</h2>
+      <h2 id="nform-title" tabindex="-1" autofocus data-i18n="nform.titleNew">記録を書く</h2>
       <input type="hidden" name="id">
       <div class="row">
-        <label>日付<input type="date" name="date" required></label>
-        <label>時刻<input type="time" name="time"></label>
+        <label><span data-i18n="nform.date">日付</span><input type="date" name="date" required></label>
+        <label><span data-i18n="nform.time">時刻</span><input type="time" name="time"></label>
       </div>
 
       <fieldset>
-        <legend>だれの記録？</legend>
+        <legend data-i18n="nform.who">だれの記録？</legend>
         <div id="nform-patients" class="choice-grid"></div>
       </fieldset>
 
       <fieldset>
-        <legend>種類（えらぶ か 自由に書く）</legend>
-        <input name="category" maxlength="30" placeholder="例：食事、服薬、転倒、受診 など">
+        <legend data-i18n="nform.category">種類（えらぶ か 自由に書く）</legend>
+        <input name="category" maxlength="30" data-i18n-ph="nform.categoryPh" placeholder="例：食事、服薬、転倒、受診 など">
         <div id="nform-categories" class="cat-chips"></div>
       </fieldset>
 
-      <label>内容<textarea name="text" rows="6" placeholder="ここに書いてください"></textarea></label>
+      <label><span data-i18n="nform.text">内容</span><textarea name="text" rows="6" data-i18n-ph="nform.textPh" placeholder="ここに書いてください"></textarea></label>
 
       <div class="media-input">
-        <label class="btn btn-media">📷 写真を追加
+        <label class="btn btn-media"><span data-i18n="nform.photo">📷 写真を追加</span>
           <input type="file" id="nform-files" accept="image/*,video/*" multiple hidden>
         </label>
-        <small class="muted">短い動画（100MBまで）も追加できます。写真は自動で小さくして保存します。</small>
+        <small class="muted" data-i18n="nform.mediaNote">短い動画（100MBまで）も追加できます。写真は自動で小さくして保存します。</small>
         <div id="nform-media" class="media-grid"></div>
         <div id="nform-progress" class="progress" hidden></div>
       </div>
 
       <div class="row">
-        <label>記入者<input name="author" maxlength="30" placeholder="あなたの名前"></label>
-        <label class="check big"><input type="checkbox" name="important"> ⭐ 重要（申し送り）</label>
+        <label><span data-i18n="nform.author">記入者</span><input name="author" maxlength="30" data-i18n-ph="nform.authorPh" placeholder="あなたの名前"></label>
+        <label class="check big"><input type="checkbox" name="important"> <span data-i18n="nform.important">⭐ 重要（申し送り）</span></label>
       </div>
 
       <p id="nform-error" class="error" hidden></p>
       <div class="actions">
-        <button type="submit" class="btn btn-save" id="nform-save">💾 保存する</button>
-        <button type="button" class="btn btn-gray" id="nform-cancel">やめる</button>
+        <button type="submit" class="btn btn-save" id="nform-save" data-i18n="btn.save">💾 保存する</button>
+        <button type="button" class="btn btn-gray" id="nform-cancel" data-i18n="btn.cancel">やめる</button>
       </div>
     </form>
   </dialog>
@@ -205,29 +208,29 @@
   <!-- 予定の入力 -->
   <dialog id="event-dialog">
     <form id="event-form" class="form" method="dialog">
-      <h2 id="eform-title" tabindex="-1" autofocus>予定を入れる</h2>
+      <h2 id="eform-title" tabindex="-1" autofocus data-i18n="eform.titleAdd">予定を入れる</h2>
       <input type="hidden" name="id">
       <div class="row">
-        <label>日付<input type="date" name="date" required></label>
-        <label>時刻（なくてもよい）<input type="time" name="time"></label>
+        <label><span data-i18n="eform.date">日付</span><input type="date" name="date" required></label>
+        <label><span data-i18n="eform.time">時刻（なくてもよい）</span><input type="time" name="time"></label>
       </div>
-      <label>予定の内容（必須）<input name="title" maxlength="100" placeholder="例：内科受診、家族の面会、誕生日会"></label>
+      <label><span data-i18n="eform.title">予定の内容（必須）</span><input name="title" maxlength="100" data-i18n-ph="eform.titlePh" placeholder="例：内科受診、家族の面会、誕生日会"></label>
       <fieldset>
-        <legend>だれの予定？</legend>
+        <legend data-i18n="eform.who">だれの予定？</legend>
         <div id="eform-patients" class="choice-grid"></div>
       </fieldset>
       <fieldset>
-        <legend>くり返し</legend>
+        <legend data-i18n="eform.repeat">くり返し</legend>
         <div id="eform-repeat" class="cat-chips"></div>
-        <label id="eform-until-wrap" hidden style="margin-top:10px">いつまで（なくてもよい）<input type="date" name="until"></label>
-        <small class="muted" id="eform-repeat-note" hidden>くり返しの予定を直すと、すべての回が変わります。</small>
+        <label id="eform-until-wrap" hidden style="margin-top:10px"><span data-i18n="eform.until">いつまで（なくてもよい）</span><input type="date" name="until"></label>
+        <small class="muted" id="eform-repeat-note" hidden data-i18n="eform.repeatNote">くり返しの予定を直すと、すべての回が変わります。</small>
       </fieldset>
-      <label>メモ<textarea name="memo" rows="3" maxlength="2000" placeholder="例：保険証を持っていく"></textarea></label>
+      <label><span data-i18n="eform.memo">メモ</span><textarea name="memo" rows="3" maxlength="2000" data-i18n-ph="eform.memoPh" placeholder="例：保険証を持っていく"></textarea></label>
       <p id="eform-error" class="error" hidden></p>
       <div class="actions">
-        <button type="submit" class="btn btn-save">💾 保存する</button>
-        <button type="button" class="btn btn-gray" id="eform-cancel">やめる</button>
-        <button type="button" class="btn btn-del" id="eform-delete" hidden>🗑 消す</button>
+        <button type="submit" class="btn btn-save" data-i18n="btn.save">💾 保存する</button>
+        <button type="button" class="btn btn-gray" id="eform-cancel" data-i18n="btn.cancel">やめる</button>
+        <button type="button" class="btn btn-del" id="eform-delete" hidden data-i18n="btn.delete">🗑 消す</button>
       </div>
     </form>
   </dialog>
@@ -235,17 +238,17 @@
   <!-- 利用者の登録・編集 -->
   <dialog id="patient-dialog">
     <form id="patient-form" class="form" method="dialog">
-      <h2 id="pform-title" tabindex="-1" autofocus>利用者を登録する</h2>
+      <h2 id="pform-title" tabindex="-1" autofocus data-i18n="pform.titleDefault">利用者を登録する</h2>
       <input type="hidden" name="id">
       <input type="hidden" name="slot">
-      <label>名前（必須）<input name="name" required maxlength="50" placeholder="例：山田 花子"></label>
-      <label>ふりがな<input name="kana" maxlength="50" placeholder="例：やまだ はなこ"></label>
-      <label>部屋番号<input name="room" maxlength="20" placeholder="例：101"></label>
-      <label>メモ（注意点など）<textarea name="memo" rows="3" maxlength="1000" placeholder="例：アレルギー：卵"></textarea></label>
+      <label><span data-i18n="pform.name">名前（必須）</span><input name="name" required maxlength="50" data-i18n-ph="pform.namePh" placeholder="例：山田 花子"></label>
+      <label><span data-i18n="pform.kana">ふりがな</span><input name="kana" maxlength="50" data-i18n-ph="pform.kanaPh" placeholder="例：やまだ はなこ"></label>
+      <label><span data-i18n="pform.room">部屋番号</span><input name="room" maxlength="20" data-i18n-ph="pform.roomPh" placeholder="例：101"></label>
+      <label><span data-i18n="pform.memo">メモ（注意点など）</span><textarea name="memo" rows="3" maxlength="1000" data-i18n-ph="pform.memoPh" placeholder="例：アレルギー：卵"></textarea></label>
       <p id="pform-error" class="error" hidden></p>
       <div class="actions">
-        <button type="submit" class="btn btn-save">💾 保存する</button>
-        <button type="button" id="pform-cancel" class="btn btn-gray">やめる</button>
+        <button type="submit" class="btn btn-save" data-i18n="btn.save">💾 保存する</button>
+        <button type="button" id="pform-cancel" class="btn btn-gray" data-i18n="btn.cancel">やめる</button>
       </div>
     </form>
   </dialog>
@@ -253,7 +256,7 @@
   <!-- 写真・動画の拡大表示 -->
   <dialog id="viewer" class="viewer">
     <div id="viewer-body"></div>
-    <button class="btn btn-gray" id="viewer-close">✕ 閉じる</button>
+    <button class="btn btn-gray" id="viewer-close" data-i18n="btn.close">✕ 閉じる</button>
   </dialog>
 
   <!-- 確認 -->
@@ -261,14 +264,27 @@
     <form method="dialog" class="form">
       <p id="confirm-text" class="confirm-text"></p>
       <div class="actions">
-        <button value="yes" class="btn btn-del">はい</button>
-        <button value="no" class="btn btn-gray">いいえ</button>
+        <button value="yes" class="btn btn-del" data-i18n="btn.yes">はい</button>
+        <button value="no" class="btn btn-gray" data-i18n="btn.no">いいえ</button>
       </div>
     </form>
   </dialog>
 
+  <!-- 言語えらび（どの言語の人にも読めるように、題名は3つの言語で書いてある） -->
+  <dialog id="lang-dialog" class="confirm">
+    <div class="form">
+      <h2>🌐 言語 ／ Bahasa ／ භාෂාව</h2>
+      <div id="lang-list" class="lang-list"></div>
+      <button type="button" class="btn btn-gray" id="lang-close">✕</button>
+    </div>
+  </dialog>
+
   <div id="toast" class="toast" hidden></div>
 
+  <script src="lang/ja.js"></script>
+  <script src="lang/id.js"></script>
+  <script src="lang/si.js"></script>
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

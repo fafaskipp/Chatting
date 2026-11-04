@@ -94,7 +94,7 @@
       else data = store.handle(method, url.pathname, url.searchParams, opts.body ? JSON.parse(opts.body) : {});
     } catch (e) {
       status = e.status || 500;
-      data = { error: e.status ? e.message : 'エラーが起きました' };
+      data = e.status ? { error: e.message, code: e.code, params: e.params } : { error: 'エラーが起きました', code: 'server' };
       if (!e.status) console.error(e);
     }
     return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
@@ -107,13 +107,13 @@
         memoryMedia.set(id, URL.createObjectURL(file));
         return resolve({ file: id, type: 'video' });
       }
-      if (!file.type.startsWith('image/')) return reject(new Error('この種類のファイルは使えません（写真を選んでください）'));
+      if (!file.type.startsWith('image/')) return reject(new Error(t('err.badFileType')));
       const r = new FileReader();
       r.onload = () => {
         store.db.media[id] = r.result;
         resolve({ file: id, type: 'image' });
       };
-      r.onerror = () => reject(new Error('読み込みに失敗しました'));
+      r.onerror = () => reject(new Error(t('err.readFailed')));
       r.readAsDataURL(file);
     });
 

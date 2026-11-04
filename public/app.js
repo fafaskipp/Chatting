@@ -1,7 +1,8 @@
 // 介護日記 — 画面の動き
+// 画面の文章は public/lang/ の中の言語ファイルにあります（t('名前') で取り出します）。
 'use strict';
 
-// よく使う種類の色（それ以外は自動で色を決める）
+// よく使う種類の色（それ以外は自動で色を決める）。種類の名前は、記録に保存する日本語の名前で書く
 const CATEGORY_COLORS = {
   '食事': '#ef6c00',
   '水分': '#0277bd',
@@ -16,7 +17,6 @@ const CATEGORY_COLORS = {
   'その他': '#616161',
 };
 const AUTO_COLORS = ['#00695c', '#4527a0', '#9e6a00', '#37474f', '#880e4f', '#1565c0', '#558b2f', '#bf360c'];
-const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
 const PAGE = 50; // 1回に表示する記録の数
 const PHOTO_MAX_PX = 1600; // 写真はこの大きさまで縮小して保存
 
@@ -31,6 +31,9 @@ const state = {
   neighborUrl: '',
   categories: Object.keys(CATEGORY_COLORS),
   slots: 10,
+  trashDays: 30,
+  addresses: [],
+  port: 0,
   version: 0,
   form: { patientId: null, media: [] },
   uploading: 0,
@@ -47,8 +50,16 @@ const state = {
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
+const esc = I18N.esc;
+const catLabel = I18N.catLabel;
 
 // ---------- 共通 ----------
+
+// サーバーからのエラーを、今の言語にして返す（コードがなければ、届いた文章のまま）
+function errorText(data) {
+  if (data && data.code && I18N.has('err.' + data.code)) return t('err.' + data.code, data.params);
+  return (data && data.error) || t('err.network');
+}
 
 async function api(path, opts = {}) {
   const res = await fetch('/api/' + path, {
@@ -57,7 +68,7 @@ async function api(path, opts = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || '通信に失敗しました');
+  if (!res.ok) throw new Error(errorText(data));
   return data;
 }
 
@@ -68,10 +79,6 @@ function remember(key, value) {
     localStorage.setItem(key, value);
   } catch {}
   return '';
-}
-
-function esc(s) {
-  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function ymd(d) {
@@ -85,24 +92,26 @@ function daysAgo(n) {
   return ymd(d);
 }
 
-function jpDate(s, withLabel = true) {
+// 日付・月の書きかたは、言語ごとに言語ファイルで決まる
+function fmtDate(s, withLabel = true) {
   const [y, m, d] = s.split('-').map(Number);
-  const w = WEEK[new Date(y, m - 1, d).getDay()];
-  const label = !withLabel ? '' : s === daysAgo(0) ? '（今日）' : s === daysAgo(1) ? '（昨日）' : '';
-  return `${y}年${m}月${d}日（${w}）${label}`;
+  const w = new Date(y, m - 1, d).getDay();
+  const label = !withLabel ? '' : s === daysAgo(0) ? t('date.labelToday') : s === daysAgo(1) ? t('date.labelYesterday') : '';
+  return t('date.full', { y, m, d, M: I18N.raw('date.months')[m - 1], w: I18N.raw('date.weekdays')[w] }) + label;
 }
 
-function jpDateTime(iso) {
+function fmtDateTime(iso) {
   const d = new Date(iso);
-  return `${jpDate(ymd(d), false)} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return t('date.dateTime', { date: fmtDate(ymd(d), false), time });
 }
 
 function toast(msg) {
-  const t = $('#toast');
-  t.textContent = msg;
-  t.hidden = false;
+  const el = $('#toast');
+  el.textContent = msg;
+  el.hidden = false;
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => (t.hidden = true), 2500);
+  toast.timer = setTimeout(() => (el.hidden = true), 2500);
 }
 
 function catColor(name) {
@@ -112,14 +121,39 @@ function catColor(name) {
   return AUTO_COLORS[h % AUTO_COLORS.length];
 }
 
-// 画面の上とブラウザのタブに出す名前（未設定なら「介護日記」）
+// 画面の上とブラウザのタブに出す名前（未設定なら、今の言語の「介護日記」）
 function appName() {
-  return state.unitName || '介護日記';
+  return state.unitName || t('app.name');
 }
 
 function renderUnitName() {
   $('#unit-name').textContent = appName();
   document.title = appName();
+}
+
+// 他の言語でも「その言語の名前」で保存・検索できるように、種類の名前を保存用に直す
+const toCanonical = (text) => I18N.catCanonical(text);
+
+// ことばを変えたときにも作り直す画面の部分（言語・ユニット名・説明の文章）
+function renderStatic() {
+  const cur = I18N.LANGS.find((l) => l.code === I18N.lang);
+  $('#lang-code').textContent = cur ? cur.short : 'JA';
+  renderUnitName();
+  $('#slot-hint').innerHTML = th('manage.hint', { n: state.slots });
+  $('#trash-hint').innerHTML = th('trash.hint', { n: state.trashDays });
+  const urls = state.addresses.map((ip) => `<code>http://${esc(ip)}:${state.port}</code>`).join('<br>');
+  $('#server-info').innerHTML = `${esc(t('server.info'))}<br>${urls || esc(t('server.noNet'))}`;
+}
+
+// となりのユニットへ行くとき、今の言語も持っていく（アドレスが変わると端末の言語の保存先も変わるため）
+function withLang(url) {
+  try {
+    const u = new URL(url);
+    u.searchParams.set('lang', I18N.lang);
+    return u.href;
+  } catch {
+    return url;
+  }
 }
 
 // となりのユニット（夜勤で2ユニットを見るとき）：「日付」の画面のいちばん下のボタン
@@ -129,8 +163,8 @@ function renderNeighbor() {
     box.innerHTML = '';
     return;
   }
-  const name = state.neighborName || 'となりのユニット';
-  box.innerHTML = `<a class="neighbor-btn" href="${esc(state.neighborUrl)}" target="_blank" rel="noopener">${esc(name)}の記録を見る ▶</a>`;
+  const name = state.neighborName || t('nb.defaultName');
+  box.innerHTML = `<a class="neighbor-btn" href="${esc(withLang(state.neighborUrl))}" target="_blank" rel="noopener">${esc(t('nb.button', { name }))}</a>`;
 }
 
 function patientName(id) {
@@ -154,11 +188,11 @@ function mediaHtml(media, removable) {
   return media
     .map(
       (m, i) => `
-      <button type="button" class="media-item" data-src="/uploads/${esc(m.file)}" data-type="${m.type}" title="大きく見る">
+      <button type="button" class="media-item" data-src="/uploads/${esc(m.file)}" data-type="${m.type}" title="${esc(t('note.mediaView'))}">
         ${m.type === 'video'
           ? `<video src="/uploads/${esc(m.file)}#t=0.1" preload="metadata" muted></video><span class="play">▶</span>`
           : `<img src="/uploads/${esc(m.file)}" loading="lazy" alt="">`}
-        ${removable ? `<span class="remove" data-remove="${i}" role="button" aria-label="消す">✕</span>` : ''}
+        ${removable ? `<span class="remove" data-remove="${i}" role="button" aria-label="${esc(t('note.remove'))}">✕</span>` : ''}
       </button>`
     )
     .join('');
@@ -168,41 +202,41 @@ function mediaHtml(media, removable) {
 function noteHtml(n, showPatient, mode = 'normal', nameOverride) {
   const name = nameOverride || patientName(n.patientId);
   const patient = n.patientId
-    ? `<span class="tag tag-patient">👤 ${esc(name)} 様</span>`
-    : `<span class="tag tag-none">全体・共有</span>`;
+    ? `<span class="tag tag-patient">👤 ${th('patient.person', { name })}</span>`
+    : `<span class="tag tag-none">${th('patient.shared')}</span>`;
   const buttons =
     mode === 'normal'
-      ? `<button class="btn btn-edit" data-edit="${n.id}">✏️ 直す</button>
-         <button class="btn btn-del" data-del="${n.id}">🗑 消す</button>`
+      ? `<button class="btn btn-edit" data-edit="${n.id}">${th('btn.edit')}</button>
+         <button class="btn btn-del" data-del="${n.id}">${th('btn.delete')}</button>`
       : mode === 'trash'
-        ? `<button class="btn btn-restore" data-nrestore="${n.id}">↩️ 元に戻す</button>
-           <button class="btn btn-del" data-npurge="${n.id}">完全に消す</button>`
+        ? `<button class="btn btn-restore" data-nrestore="${n.id}">${th('btn.restore')}</button>
+           <button class="btn btn-del" data-npurge="${n.id}">${th('btn.purge')}</button>`
         : '';
   return `
     <article class="note ${n.important ? 'important' : ''}">
       <div class="note-head">
-        ${n.important ? '<span class="tag" style="background:#f9a825;color:#000">⭐ 重要</span>' : ''}
-        ${mode === 'trash' ? `<span class="note-time">${esc(jpDate(n.date, false))}</span>` : ''}
+        ${n.important ? `<span class="tag" style="background:#f9a825;color:#000">${th('note.important')}</span>` : ''}
+        ${mode === 'trash' ? `<span class="note-time">${esc(fmtDate(n.date, false))}</span>` : ''}
         <span class="note-time">${n.time ? '🕒 ' + esc(n.time) : ''}</span>
         ${showPatient ? patient : ''}
-        <span class="tag" style="background:${catColor(n.category)}">${esc(n.category)}</span>
+        <span class="tag" style="background:${catColor(n.category)}">${esc(catLabel(n.category))}</span>
       </div>
       ${n.text ? `<div class="note-text">${esc(n.text)}</div>` : ''}
       ${n.media.length ? `<div class="media-grid">${mediaHtml(n.media, false)}</div>` : ''}
       <div class="note-foot">
-        <span>${n.author ? '記入：' + esc(n.author) : ''}</span>
+        <span>${n.author ? th('note.author', { name: n.author }) : ''}</span>
         <span class="actions">${buttons}</span>
       </div>
     </article>`;
 }
 
 function notesHtml(notes, showPatient, mode, nameOverride) {
-  if (!notes.length) return '<div class="empty">記録はありません。</div>';
+  if (!notes.length) return `<div class="empty">${th('note.empty')}</div>`;
   let html = '';
   let lastDate = '';
   for (const n of notes) {
     if (n.date !== lastDate) {
-      html += `<h3 class="day-head">${jpDate(n.date)}</h3>`;
+      html += `<h3 class="day-head">${esc(fmtDate(n.date))}</h3>`;
       lastDate = n.date;
     }
     html += noteHtml(n, showPatient, mode, nameOverride);
@@ -213,36 +247,44 @@ function notesHtml(notes, showPatient, mode, nameOverride) {
 // 今の画面の検索条件（表示・印刷 共通）
 function currentQuery() {
   const q = new URLSearchParams();
-  let title = '';
   if (state.view === 'patient') {
     if (state.selectedPatient) q.set('patientId', state.selectedPatient);
     q.set('from', state.month + '-01');
     q.set('to', state.month + '-31');
-    const who = state.selectedPatient === 'none' ? '全体・共有' : `${patientName(state.selectedPatient)} 様`;
-    title = `${appName()}　${who}の記録（${jpMonth(state.month)}）`;
-    return { q, title };
+    const who = state.selectedPatient === 'none' ? t('title.whoShared') : t('patient.person', { name: patientName(state.selectedPatient) });
+    return { q, title: t('title.patient', { app: appName(), who, month: fmtMonth(state.month) }) };
   }
   const range = {
-    today: [daysAgo(0), daysAgo(0), '今日'],
-    yesterday: [daysAgo(1), daysAgo(1), '昨日'],
-    week: [daysAgo(6), daysAgo(0), 'この1週間'],
-    month: [daysAgo(30), daysAgo(0), 'この1か月'],
-    all: ['', '', 'すべて'],
+    today: [daysAgo(0), daysAgo(0)],
+    yesterday: [daysAgo(1), daysAgo(1)],
+    week: [daysAgo(6), daysAgo(0)],
+    month: [daysAgo(30), daysAgo(0)],
+    all: ['', ''],
   }[state.range];
-  let [from, to, label] = range;
+  let [from, to] = range;
+  let label = t('title.range.' + state.range);
   if (state.pickedDate) {
     from = to = state.pickedDate;
-    label = jpDate(state.pickedDate, false);
+    label = fmtDate(state.pickedDate, false);
   }
   if (from) q.set('from', from);
   if (to) q.set('to', to);
+  const parts = [label];
   const cat = $('#date-category').value;
-  if (cat) q.set('category', cat);
+  if (cat) {
+    q.set('category', cat);
+    parts.push(catLabel(cat));
+  }
   const kw = $('#date-search').value.trim();
-  if (kw) q.set('q', kw);
-  if ($('#date-important').checked) q.set('important', '1');
-  title = `${appName()}（${label}${cat ? '・' + cat : ''}${kw ? '・「' + kw + '」' : ''}${$('#date-important').checked ? '・重要のみ' : ''}）`;
-  return { q, title };
+  if (kw) {
+    q.set('q', kw);
+    parts.push(t('title.keyword', { kw }));
+  }
+  if ($('#date-important').checked) {
+    q.set('important', '1');
+    parts.push(t('title.importantOnly'));
+  }
+  return { q, title: t('title.date', { app: appName(), parts: parts.join(t('title.sep')) }) };
 }
 
 // 記録を PAGE 件ずつ表示し、「もっと見る」で続きを読み込む
@@ -258,22 +300,23 @@ async function loadPaged(name, el, q, showPatient, emptyHtml) {
   const rest = total - notes.length;
   el.innerHTML = notes.length
     ? notesHtml(notes, showPatient, 'normal') +
-      (rest > 0 ? `<button class="btn more-btn" data-more="${name}">⬇ もっと見る（あと ${rest} 件）</button>` : '')
+      (rest > 0 ? `<button class="btn more-btn" data-more="${name}">${th('btn.more', { n: rest })}</button>` : '')
     : emptyHtml;
 }
 
 async function loadDateView() {
   const { q } = currentQuery();
   const active = state.pickedDate || $('#date-category').value || $('#date-search').value.trim();
-  $('#date-more summary').textContent = active ? '🔍 詳しく探す（条件あり）' : '🔍 詳しく探す';
-  await loadPaged('date', $('#date-list'), q, true, '<div class="empty">記録はまだありません。<br>「＋ 記録を書く」から書けます。</div>');
+  $('#date-more summary').textContent = t(active ? 'date.moreActive' : 'date.more');
+  await loadPaged('date', $('#date-list'), q, true, `<div class="empty">${th('note.emptyFirst')}</div>`);
 }
 
 function renderCategoryFilter() {
   const sel = $('#date-category');
   const cur = sel.value;
   sel.innerHTML =
-    '<option value="">すべての種類</option>' + state.categories.map((c) => `<option ${c === cur ? 'selected' : ''}>${esc(c)}</option>`).join('');
+    `<option value="">${esc(t('date.allCategories'))}</option>` +
+    state.categories.map((c) => `<option value="${esc(c)}" ${c === cur ? 'selected' : ''}>${esc(catLabel(c))}</option>`).join('');
 }
 
 function renderPatientButtons() {
@@ -281,17 +324,17 @@ function renderPatientButtons() {
   const list = state.patients.filter((p) => !kw || `${p.name}${p.kana}`.replace(/\s/g, '').toLowerCase().includes(kw));
   const box = $('#patient-buttons');
   if (!state.patients.length) {
-    box.innerHTML = '<div class="empty">利用者がまだ登録されていません。「⚙️ 管理」から登録してください。</div>';
+    box.innerHTML = `<div class="empty">${th('patient.none')}</div>`;
     return;
   }
   box.innerHTML =
     list
       .map(
         (p) => `<button class="pbtn ${state.selectedPatient === p.id ? 'active' : ''}" data-pid="${p.id}">
-          ${esc(p.name)}<small>${esc(p.kana)}${p.room ? '　' + esc(p.room) + '号室' : ''}</small></button>`
+          ${esc(p.name)}<small>${esc(p.kana)}${p.room ? '　' + th('patient.room', { room: p.room }) : ''}</small></button>`
       )
       .join('') +
-    (kw ? '' : `<button class="pbtn ${state.selectedPatient === 'none' ? 'active' : ''}" data-pid="none">全体・共有<small>利用者なしの記録</small></button>`);
+    (kw ? '' : `<button class="pbtn ${state.selectedPatient === 'none' ? 'active' : ''}" data-pid="none">${th('patient.shared')}<small>${th('patient.sharedSub')}</small></button>`);
   if (kw && list.length === 1 && state.selectedPatient !== list[0].id) selectPatient(list[0].id);
 }
 
@@ -305,15 +348,15 @@ async function loadPatientView() {
   $('#patient-toolbar').hidden = !state.selectedPatient;
   if (!state.selectedPatient) {
     head.innerHTML = '';
-    listEl.innerHTML = '<div class="empty">上の名前のボタンを押すと、その人の記録だけが表示されます。</div>';
+    listEl.innerHTML = `<div class="empty">${th('patient.pickHint')}</div>`;
     return;
   }
   const p = state.patients.find((x) => x.id === state.selectedPatient);
   head.innerHTML = p
-    ? `<h2>👤 ${esc(p.name)} 様の記録</h2>${p.memo ? `<div class="patient-memo">📌 ${esc(p.memo)}</div>` : ''}`
-    : '<h2>全体・共有の記録</h2>';
+    ? `<h2>${th('patient.heading', { name: p.name })}</h2>${p.memo ? `<div class="patient-memo">📌 ${esc(p.memo)}</div>` : ''}`
+    : `<h2>${th('patient.headingShared')}</h2>`;
   renderMonthNav();
-  await loadPaged('patient', listEl, currentQuery().q, false, `<div class="empty">${jpMonth(state.month)}の記録はありません。<br>「◀ 前の月」で前の月を見られます。</div>`);
+  await loadPaged('patient', listEl, currentQuery().q, false, `<div class="empty">${th('patient.emptyMonth', { month: fmtMonth(state.month) })}</div>`);
 }
 
 function selectPatient(id) {
@@ -323,7 +366,8 @@ function selectPatient(id) {
 
 // ---------- 予定（カレンダー） ----------
 
-const REPEAT_LABEL = { '': 'なし', weekly: '毎週', monthly: '毎月' };
+const REPEAT_KEYS = ['', 'weekly', 'monthly'];
+const repeatLabel = (k) => t('repeat.' + (k || 'none'));
 
 function eventColor(e) {
   return e.patientId ? 'var(--green)' : 'var(--blue)';
@@ -331,22 +375,22 @@ function eventColor(e) {
 
 function eventHtml(e, withDate) {
   const who = e.patientId
-    ? `<span class="tag tag-patient">👤 ${esc(patientName(e.patientId))} 様</span>`
-    : '<span class="tag" style="background:var(--blue)">全体</span>';
+    ? `<span class="tag tag-patient">👤 ${th('patient.person', { name: patientName(e.patientId) })}</span>`
+    : `<span class="tag" style="background:var(--blue)">${th('event.all')}</span>`;
   return `<div class="event-item">
-    <div class="ev-time">${withDate ? esc(Number(e.date.slice(8, 10)) + '日') + '<br>' : ''}${e.time ? esc(e.time) : '終日'}</div>
+    <div class="ev-time">${withDate ? esc(t('date.dayOnly', { d: Number(e.date.slice(8, 10)) })) + '<br>' : ''}${e.time ? esc(e.time) : esc(t('event.allDay'))}</div>
     <div class="ev-body">
       <div class="title">${esc(e.title)}</div>
-      <div class="chips">${who}${e.repeat ? `<span class="tag tag-none">🔁 ${REPEAT_LABEL[e.repeat]}</span>` : ''}</div>
+      <div class="chips">${who}${e.repeat ? `<span class="tag tag-none">🔁 ${esc(repeatLabel(e.repeat))}</span>` : ''}</div>
       ${e.memo ? `<div class="text">${esc(e.memo)}</div>` : ''}
     </div>
-    <button class="btn btn-edit" data-eedit="${e.id}">✏️ 直す</button>
+    <button class="btn btn-edit" data-eedit="${e.id}">${th('btn.edit')}</button>
   </div>`;
 }
 
 async function loadCalendar() {
   const [y, m] = state.calMonth.split('-').map(Number);
-  $('#cal-label').textContent = jpMonth(state.calMonth);
+  $('#cal-label').textContent = fmtMonth(state.calMonth);
   const first = new Date(y, m - 1, 1);
   const start = new Date(y, m - 1, 1 - first.getDay()); // 日曜はじまり
   const weeks = Math.ceil((first.getDay() + new Date(y, m, 0).getDate()) / 7);
@@ -359,7 +403,7 @@ async function loadCalendar() {
   const today = ymd(new Date());
 
   $('#cal-grid').innerHTML =
-    WEEK.map((w, i) => `<div class="cal-head ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${w}</div>`).join('') +
+    I18N.raw('date.weekdaysShort').map((w, i) => `<div class="cal-head ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${esc(w)}</div>`).join('') +
     days
       .map((d, i) => {
         const list = byDay.get(d) || [];
@@ -372,7 +416,7 @@ async function loadCalendar() {
         return `<button type="button" class="cal-cell ${cls}" data-day="${d}">
           <span class="dnum">${Number(d.slice(8, 10))}</span>
           ${list.slice(0, 3).map((e) => `<span class="cal-ev" style="background:${eventColor(e)}">${e.time ? esc(e.time) + ' ' : ''}${esc(e.title)}</span>`).join('')}
-          ${list.length > 3 ? `<span class="cal-more">＋${list.length - 3}件</span>` : ''}
+          ${list.length > 3 ? `<span class="cal-more">${th('cal.more', { n: list.length - 3 })}</span>` : ''}
         </button>`;
       })
       .join('');
@@ -380,16 +424,16 @@ async function loadCalendar() {
   const dayList = byDay.get(state.calDay) || [];
   $('#cal-day').innerHTML = state.calDay
     ? `<div class="rep-block">
-        <div class="area-head"><h3>${jpDate(state.calDay)}の予定</h3>
-          <button class="btn btn-add" style="width:auto" data-eadd="${state.calDay}">＋ この日に入れる</button></div>
-        ${dayList.length ? dayList.map((e) => eventHtml(e, false)).join('') : '<p class="sub-hint">この日の予定はありません。</p>'}
+        <div class="area-head"><h3>${th('cal.dayTitle', { date: fmtDate(state.calDay) })}</h3>
+          <button class="btn btn-add" style="width:auto" data-eadd="${state.calDay}">${th('cal.addDay')}</button></div>
+        ${dayList.length ? dayList.map((e) => eventHtml(e, false)).join('') : `<p class="sub-hint">${th('cal.noDay')}</p>`}
       </div>`
     : '';
 
   const monthList = events.filter((e) => e.date.slice(0, 7) === state.calMonth);
   $('#cal-list').innerHTML = monthList.length
     ? `<div class="rep-block">${monthList.map((e) => eventHtml(e, true)).join('')}</div>`
-    : '<div class="empty">この月の予定はまだありません。<br>「＋ 予定を入れる」から入れられます。</div>';
+    : `<div class="empty">${th('cal.noMonth')}</div>`;
 }
 
 // 今日・明日の予定（日付の画面の上に出して、タブに件数を出す）
@@ -403,11 +447,11 @@ async function loadReminders() {
   badge.textContent = todays.length;
   const tomorrows = list.filter((e) => e.date === tomorrow);
   const line = (e) =>
-    `<div>・${e.time ? esc(e.time) + '　' : ''}<b>${esc(e.title)}</b>${e.patientId ? `（${esc(patientName(e.patientId))} 様）` : ''}</div>`;
+    `<div>•\u2003${e.time ? esc(e.time) + '\u2003' : ''}<b>${esc(e.title)}</b>${e.patientId ? th('reminder.who', { name: t('patient.person', { name: patientName(e.patientId) }) }) : ''}</div>`;
   $('#reminder').innerHTML = list.length
     ? `<div class="reminder">
-        ${todays.length ? `<h3>🔔 今日の予定（${todays.length}件）</h3>${todays.map(line).join('')}` : ''}
-        ${tomorrows.length ? `<h3 style="margin-top:8px">📅 明日の予定（${tomorrows.length}件）</h3>${tomorrows.map(line).join('')}` : ''}
+        ${todays.length ? `<h3>${th('reminder.today', { n: todays.length })}</h3>${todays.map(line).join('')}` : ''}
+        ${tomorrows.length ? `<h3 style="margin-top:8px">${th('reminder.tomorrow', { n: tomorrows.length })}</h3>${tomorrows.map(line).join('')}` : ''}
       </div>`
     : '';
 }
@@ -417,11 +461,11 @@ function renderEventChoices() {
     state.patients
       .map((p) => `<button type="button" class="choice ${state.eventForm.patientId === p.id ? 'active' : ''}" data-epid="${p.id}">${esc(p.name)}<small>${esc(p.kana)}</small></button>`)
       .join('') +
-    `<button type="button" class="choice ${!state.eventForm.patientId ? 'active' : ''}" data-epid="">全体<small>特定の人ではない</small></button>`;
-  $('#eform-repeat').innerHTML = Object.entries(REPEAT_LABEL)
-    .map(([k, label]) => {
+    `<button type="button" class="choice ${!state.eventForm.patientId ? 'active' : ''}" data-epid="">${th('event.all')}<small>${th('patient.sharedSub2')}</small></button>`;
+  $('#eform-repeat').innerHTML = REPEAT_KEYS
+    .map((k) => {
       const on = state.eventForm.repeat === k;
-      return `<button type="button" class="cat-chip ${on ? 'active' : ''}" data-erep="${k}" style="color:var(--blue);${on ? 'background:var(--blue)' : ''}">${label}</button>`;
+      return `<button type="button" class="cat-chip ${on ? 'active' : ''}" data-erep="${k}" style="color:var(--blue);${on ? 'background:var(--blue)' : ''}">${esc(repeatLabel(k))}</button>`;
     })
     .join('');
   $('#eform-until-wrap').hidden = !state.eventForm.repeat;
@@ -439,7 +483,7 @@ function openEventForm(e, date) {
   f.until.value = e ? e.until : '';
   f.memo.value = e ? e.memo : '';
   state.eventForm = { patientId: e ? e.patientId : null, repeat: e ? e.repeat : '' };
-  $('#eform-title').textContent = e ? '予定を直す' : '予定を入れる';
+  $('#eform-title').textContent = t(e ? 'eform.titleEdit' : 'eform.titleAdd');
   $('#eform-delete').hidden = !e;
   renderEventChoices();
   $('#event-dialog').showModal();
@@ -463,7 +507,7 @@ async function saveEvent(ev) {
     $('#event-dialog').close();
     state.calDay = body.date;
     state.calMonth = body.date.slice(0, 7);
-    toast('保存しました ✅');
+    toast(t('toast.saved'));
     refresh();
   } catch (err) {
     const el = $('#eform-error');
@@ -478,9 +522,9 @@ function thisMonth() {
   return ymd(new Date()).slice(0, 7);
 }
 
-function jpMonth(m) {
+function fmtMonth(m) {
   const [y, mm] = m.split('-').map(Number);
-  return `${y}年${mm}月`;
+  return t('date.month', { y, m: mm, M: I18N.raw('date.months')[mm - 1] });
 }
 
 function shiftMonth(m, d) {
@@ -489,18 +533,18 @@ function shiftMonth(m, d) {
 }
 
 function renderMonthNav() {
-  $$('.month-label').forEach((el) => (el.textContent = jpMonth(state.month)));
+  $$('.month-label').forEach((el) => (el.textContent = fmtMonth(state.month)));
   $$('[data-month="1"]').forEach((b) => (b.disabled = state.month >= thisMonth()));
 }
 
-function countChip(icon, label, n, cls) {
-  return `<span class="chip ${n ? cls : 'chip-zero'}">${n ? icon + ' ' : ''}${label} ${n}件</span>`;
+function countChip(icon, key, n, cls) {
+  return `<span class="chip ${n ? cls : 'chip-zero'}">${n ? icon + ' ' : ''}${th(key, { n })}</span>`;
 }
 
 function miniNoteHtml(n) {
   return `<div class="mini-note" style="border-color:${catColor(n.category)}">
-    <span class="when">${esc(jpDate(n.date, false))} ${esc(n.time)}</span>
-    <span class="tag" style="background:${catColor(n.category)}">${esc(n.category)}</span>
+    <span class="when">${esc(fmtDate(n.date, false))} ${esc(n.time)}</span>
+    <span class="tag" style="background:${catColor(n.category)}">${esc(catLabel(n.category))}</span>
     ${n.text ? `<div class="text">${esc(n.text)}</div>` : ''}
   </div>`;
 }
@@ -511,7 +555,7 @@ async function loadMonthEvents() {
   const s = await api('summary?month=' + state.month);
   const groups = s.groups.filter((g) => g.id !== 'none' || g.notes.length);
   if (!groups.length) {
-    $('#rep-body').innerHTML = '<div class="empty">利用者がまだ登録されていません。「⚙️ 管理」から登録してください。</div>';
+    $('#rep-body').innerHTML = `<div class="empty">${th('patient.none')}</div>`;
     return;
   }
   $('#rep-body').innerHTML = groups
@@ -519,42 +563,43 @@ async function loadMonthEvents() {
       const open = state.openMonthAll.has(g.id);
       return `<div class="rep-block ${g.incidents.length ? 'danger' : ''}">
         <div class="area-head">
-          <h3>${g.id === 'none' ? '📢 全体・共有' : '👤 ' + esc(g.name) + ' 様'}</h3>
+          <h3>${g.id === 'none' ? th('report.sharedTitle') : th('report.personTitle', { name: t('patient.person', { name: g.name }) })}</h3>
           <div class="chips">
-            ${countChip('⚠️', 'ヒヤリ・事故', g.incidents.length, 'chip-inc')}
-            ${countChip('⭐', '重要', g.important.length, 'chip-imp')}
-            <span class="chip chip-zero">記録 ${g.notes.length}件</span>
+            ${countChip('⚠️', 'chip.incident', g.incidents.length, 'chip-inc')}
+            ${countChip('⭐', 'chip.important', g.important.length, 'chip-imp')}
+            <span class="chip chip-zero">${th('chip.records', { n: g.notes.length })}</span>
           </div>
         </div>
-        ${g.incidents.length ? `<h4>⚠️ ヒヤリ・事故</h4>${g.incidents.map(miniNoteHtml).join('')}` : ''}
-        ${g.important.length ? `<h4>⭐ 重要な記録</h4>${g.important.map(miniNoteHtml).join('')}` : ''}
+        ${g.incidents.length ? `<h4>${th('report.incidents')}</h4>${g.incidents.map(miniNoteHtml).join('')}` : ''}
+        ${g.important.length ? `<h4>${th('report.importants')}</h4>${g.important.map(miniNoteHtml).join('')}` : ''}
         ${!g.incidents.length && !g.important.length
-          ? `<p class="sub-hint">${g.notes.length ? 'ヒヤリ・事故や重要な記録はありませんでした。' : 'この月の記録はありません。'}</p>`
+          ? `<p class="sub-hint">${th(g.notes.length ? 'report.noneSpecial' : 'report.noNotes')}</p>`
           : ''}
         ${g.notes.length
-          ? `<button class="btn more-btn no-print" data-mall="${g.id}">${open ? '▲ 閉じる' : `📖 この月の記録をすべて見る（${g.notes.length}件）`}</button>`
+          ? `<button class="btn more-btn no-print" data-mall="${g.id}">${open ? th('btn.collapse') : th('report.viewAll', { n: g.notes.length })}</button>`
           : ''}
-        ${open ? `<h4 class="no-print">この月の記録（${g.notes.length}件）</h4><div class="no-print">${g.notes.map(miniNoteHtml).join('')}</div>` : ''}
+        ${open ? `<h4 class="no-print">${th('report.allTitle', { n: g.notes.length })}</h4><div class="no-print">${g.notes.map(miniNoteHtml).join('')}</div>` : ''}
       </div>`;
     })
     .join('');
 }
 
-function barsHtml(title, rows, colorOf) {
+// rows: [[キー, 件数], ...]。labelOf でキーを表示用の文字にする
+function barsHtml(title, rows, colorOf, labelOf = (k) => k) {
   if (!rows.length) return '';
   const max = Math.max(1, ...rows.map((r) => r[1]));
-  return `<div class="bars"><h3>${title}</h3>${rows
+  return `<div class="bars"><h3>${esc(title)}</h3>${rows
     .map(
-      ([label, n]) => `<div class="bar-row"><span class="bl" title="${esc(label)}">${esc(label)}</span>
-        <span class="bt"><span class="bf" style="width:${(n / max) * 100}%;background:${colorOf ? colorOf(label) : 'var(--blue)'}"></span></span>
-        <span class="bn">${n}件</span></div>`
+      ([key, n]) => `<div class="bar-row"><span class="bl" title="${esc(labelOf(key))}">${esc(labelOf(key))}</span>
+        <span class="bt"><span class="bf" style="width:${(n / max) * 100}%;background:${colorOf ? colorOf(key) : 'var(--blue)'}"></span></span>
+        <span class="bn">${th('bars.count', { n })}</span></div>`
     )
     .join('')}</div>`;
 }
 
 function summaryTitle() {
   const sel = $('#sum-patient');
-  return `月間まとめ ${jpMonth(state.month)}（${sel.options[sel.selectedIndex]?.text || '全員'}）`;
+  return t('title.summary', { month: fmtMonth(state.month), who: sel.options[sel.selectedIndex]?.text || t('summary.everyone') });
 }
 
 // 月間まとめ：その月の件数（種類ごと・利用者ごと）と重要な記録
@@ -563,47 +608,47 @@ async function loadSummary() {
   const patSel = $('#sum-patient');
   const curPatient = patSel.value;
   patSel.innerHTML =
-    '<option value="">全員</option>' +
-    state.patients.map((p) => `<option value="${p.id}" ${p.id === curPatient ? 'selected' : ''}>${esc(p.name)} 様</option>`).join('') +
-    `<option value="none" ${curPatient === 'none' ? 'selected' : ''}>全体・共有</option>`;
+    `<option value="">${esc(t('summary.everyone'))}</option>` +
+    state.patients.map((p) => `<option value="${p.id}" ${p.id === curPatient ? 'selected' : ''}>${esc(t('patient.person', { name: p.name }))}</option>`).join('') +
+    `<option value="none" ${curPatient === 'none' ? 'selected' : ''}>${esc(t('patient.shared'))}</option>`;
   const s = await api(`summary?month=${state.month}&patientId=${encodeURIComponent(patSel.value)}`);
   let html = `<div class="stats">
-      <div class="stat"><div class="num">${s.total}</div><div class="lab">記録の合計</div></div>
-      <div class="stat"><div class="num">${s.incidentCount}</div><div class="lab">⚠️ ヒヤリ・事故</div></div>
-      <div class="stat"><div class="num">${s.importantCount}</div><div class="lab">⭐ 重要な記録</div></div>
-      <div class="stat"><div class="num">${s.categories[0] ? esc(s.categories[0][0]) : '－'}</div><div class="lab">いちばん多い種類</div></div>
+      <div class="stat"><div class="num">${s.total}</div><div class="lab">${th('stat.total')}</div></div>
+      <div class="stat"><div class="num">${s.incidentCount}</div><div class="lab">${th('stat.incident')}</div></div>
+      <div class="stat"><div class="num">${s.importantCount}</div><div class="lab">${th('stat.important')}</div></div>
+      <div class="stat"><div class="num">${s.categories[0] ? esc(catLabel(s.categories[0][0])) : '－'}</div><div class="lab">${th('stat.topCategory')}</div></div>
     </div>`;
   if (!s.total) {
-    $('#sum-body').innerHTML = html + '<div class="empty">この月の記録はありません。</div>';
+    $('#sum-body').innerHTML = html + `<div class="empty">${th('report.noNotes')}</div>`;
     return;
   }
-  html += barsHtml('種類ごとの記録', s.categories, catColor);
-  if (!patSel.value) html += barsHtml('利用者ごとの記録', s.patients.map((p) => [p.name, p.count]), () => 'var(--green)');
-  html += `<h2>⭐ 重要な記録（${s.important.length}件）</h2>`;
-  html += s.important.length ? notesHtml(s.important, !patSel.value, 'readonly') : '<div class="empty">重要な記録はありません。</div>';
+  html += barsHtml(t('bars.category'), s.categories, catColor, catLabel);
+  if (!patSel.value) html += barsHtml(t('bars.patient'), s.patients.map((p) => [p.id === 'none' ? t('patient.shared') : p.name, p.count]), () => 'var(--green)');
+  html += `<h2>${th('summary.importantHeading', { n: s.important.length })}</h2>`;
+  html += s.important.length ? notesHtml(s.important, !patSel.value, 'readonly') : `<div class="empty">${th('summary.importantNone')}</div>`;
   $('#sum-body').innerHTML = html;
 }
 
 // ---------- 利用者の管理（枠） ----------
 
 function renderSlots() {
-  $('#slot-count').textContent = state.slots;
+  $('#slot-hint').innerHTML = th('manage.hint', { n: state.slots });
   let html = '';
   for (let i = 1; i <= state.slots; i++) {
     const p = state.patients.find((x) => x.slot === i);
     html += p
       ? `<div class="slot">
-          <div class="slot-no">No.${i}</div>
-          <div class="name">${esc(p.name)} 様</div>
-          <div class="sub">${esc(p.kana)}${p.room ? '　' + esc(p.room) + '号室' : ''}${p.memo ? '\n📌 ' + esc(p.memo) : ''}</div>
+          <div class="slot-no">${th('slot.no', { n: i })}</div>
+          <div class="name">${th('patient.person', { name: p.name })}</div>
+          <div class="sub">${esc(p.kana)}${p.room ? '　' + th('patient.room', { room: p.room }) : ''}${p.memo ? '\n📌 ' + esc(p.memo) : ''}</div>
           <div class="actions">
-            <button class="btn btn-edit" data-pedit="${p.id}">✏️ 編集</button>
-            <button class="btn btn-del" data-pdel="${p.id}">🗑 削除</button>
+            <button class="btn btn-edit" data-pedit="${p.id}">${th('slot.edit')}</button>
+            <button class="btn btn-del" data-pdel="${p.id}">${th('slot.delete')}</button>
           </div></div>`
       : `<div class="slot empty-slot">
-          <div class="slot-no">No.${i}</div>
-          <div class="slot-empty-label">（空き）</div>
-          <button class="btn btn-add" data-padd="${i}">＋ ここに登録する</button>
+          <div class="slot-no">${th('slot.no', { n: i })}</div>
+          <div class="slot-empty-label">${th('slot.empty')}</div>
+          <button class="btn btn-add" data-padd="${i}">${th('slot.register')}</button>
         </div>`;
   }
   $('#slot-list').innerHTML = html;
@@ -621,7 +666,9 @@ function openPatientForm(p, slot) {
     f.room.value = p.room;
     f.memo.value = p.memo;
   }
-  $('#pform-title').textContent = p ? `No.${p.slot}　${p.name} 様の情報を編集` : `No.${slot} に新しい利用者を登録`;
+  $('#pform-title').textContent = p
+    ? t('pform.titleEdit', { slot: p.slot, name: t('patient.person', { name: p.name }) })
+    : t('pform.titleNew', { slot });
   $('#patient-dialog').showModal();
 }
 
@@ -629,53 +676,54 @@ function openPatientForm(p, slot) {
 
 function daysLeft(iso) {
   const d = Math.ceil((new Date(iso) - Date.now()) / 86400000);
-  return d <= 1 ? '⏳ まもなく自動で消えます' : `⏳ あと ${d} 日で自動で消えます`;
+  return d <= 1 ? esc(t('trash.leftSoon')) : esc(t('trash.left', { d }));
 }
 
 async function loadTrash() {
-  const t = await api('trash');
+  const tr = await api('trash');
   const el = $('#trash-body');
-  if (!t.patients.length && !t.notes.length && !t.events.length) {
-    el.innerHTML = '<div class="empty">ゴミ箱は空です。</div>';
+  if (!tr.patients.length && !tr.notes.length && !tr.events.length) {
+    el.innerHTML = `<div class="empty">${th('trash.empty')}</div>`;
     return;
   }
-  const trashedNames = new Map(t.patients.map((p) => [p.id, p.name]));
+  const trashedNames = new Map(tr.patients.map((p) => [p.id, p.name]));
+  const sep = esc(t('trash.sep'));
   let html = '';
-  if (t.patients.length) {
-    html += '<h2>削除した利用者</h2>';
-    for (const p of t.patients) {
+  if (tr.patients.length) {
+    html += `<h2>${th('trash.patients')}</h2>`;
+    for (const p of tr.patients) {
       const open = state.openTrash === p.id;
       html += `<div class="trash-item">
         <div class="row-head">
-          <div><div class="name">${esc(p.name)} 様</div>
-            <div class="sub">削除した日：${jpDateTime(p.deletedAt)}　／　記録 ${p.noteCount} 件${p.eventCount ? `・予定 ${p.eventCount} 件` : ''}</div>
+          <div><div class="name">${th('patient.person', { name: p.name })}</div>
+            <div class="sub">${th('trash.deletedOn', { date: fmtDateTime(p.deletedAt) })}${sep}${th('trash.counts', { n: p.noteCount })}${p.eventCount ? th('trash.countsEvents', { n: p.eventCount }) : ''}</div>
             <div class="sub">${daysLeft(p.expiresAt)}</div></div>
           <div class="actions">
-            ${p.noteCount ? `<button class="btn btn-edit" data-tview="${p.id}">${open ? '▲ 閉じる' : '📖 記録を見る'}</button>` : ''}
-            <button class="btn btn-restore" data-prestore="${p.id}">↩️ 元に戻す</button>
-            <button class="btn btn-del" data-ppurge="${p.id}">完全に消す</button>
+            ${p.noteCount ? `<button class="btn btn-edit" data-tview="${p.id}">${open ? th('btn.collapse') : th('trash.viewNotes')}</button>` : ''}
+            <button class="btn btn-restore" data-prestore="${p.id}">${th('btn.restore')}</button>
+            <button class="btn btn-del" data-ppurge="${p.id}">${th('btn.purge')}</button>
           </div>
         </div>
-        ${open ? `<div class="trash-notes" id="tnotes-${p.id}">読み込み中…</div>` : ''}
+        ${open ? `<div class="trash-notes" id="tnotes-${p.id}">${th('trash.loading')}</div>` : ''}
       </div>`;
     }
   }
-  if (t.notes.length) {
-    html += '<h2>消した記録</h2>';
-    for (const n of t.notes) {
+  if (tr.notes.length) {
+    html += `<h2>${th('trash.notes')}</h2>`;
+    for (const n of tr.notes) {
       const name = trashedNames.get(n.patientId) || patientName(n.patientId);
-      html += `<div class="trash-item"><div class="sub">消した日：${jpDateTime(n.deletedAt)}　／　${daysLeft(n.expiresAt)}</div>${noteHtml(n, true, 'trash', name)}</div>`;
+      html += `<div class="trash-item"><div class="sub">${th('trash.deletedOnNote', { date: fmtDateTime(n.deletedAt) })}${sep}${daysLeft(n.expiresAt)}</div>${noteHtml(n, true, 'trash', name)}</div>`;
     }
   }
-  if (t.events.length) {
-    html += '<h2>消した予定</h2>';
-    for (const e of t.events) {
+  if (tr.events.length) {
+    html += `<h2>${th('trash.events')}</h2>`;
+    for (const e of tr.events) {
       html += `<div class="trash-item"><div class="row-head">
-          <div><div class="name">${esc(jpDate(e.date, false))}　${esc(e.title)}</div>
-            <div class="sub">消した日：${jpDateTime(e.deletedAt)}　／　${daysLeft(e.expiresAt)}</div></div>
+          <div><div class="name">${esc(fmtDate(e.date, false))}　${esc(e.title)}</div>
+            <div class="sub">${th('trash.deletedOnNote', { date: fmtDateTime(e.deletedAt) })}${sep}${daysLeft(e.expiresAt)}</div></div>
           <div class="actions">
-            <button class="btn btn-restore" data-erestore="${e.id}">↩️ 元に戻す</button>
-            <button class="btn btn-del" data-epurge="${e.id}">完全に消す</button>
+            <button class="btn btn-restore" data-erestore="${e.id}">${th('btn.restore')}</button>
+            <button class="btn btn-del" data-epurge="${e.id}">${th('btn.purge')}</button>
           </div>
         </div></div>`;
     }
@@ -696,13 +744,13 @@ function renderFormChoices() {
     state.patients
       .map((p) => `<button type="button" class="choice ${state.form.patientId === p.id ? 'active' : ''}" data-fpid="${p.id}">${esc(p.name)}<small>${esc(p.kana)}</small></button>`)
       .join('') +
-    `<button type="button" class="choice ${!state.form.patientId ? 'active' : ''}" data-fpid="">全体・共有<small>特定の人ではない</small></button>`;
-  const cur = $('#note-form').category.value.trim();
+    `<button type="button" class="choice ${!state.form.patientId ? 'active' : ''}" data-fpid="">${th('patient.shared')}<small>${th('patient.sharedSub2')}</small></button>`;
+  const cur = toCanonical($('#note-form').category.value);
   $('#nform-categories').innerHTML = state.categories
     .map((c) => {
       const col = catColor(c);
       const on = c === cur;
-      return `<button type="button" class="cat-chip ${on ? 'active' : ''}" data-fcat="${esc(c)}" style="color:${col};${on ? `background:${col}` : ''}">${esc(c)}</button>`;
+      return `<button type="button" class="cat-chip ${on ? 'active' : ''}" data-fcat="${esc(c)}" style="color:${col};${on ? `background:${col}` : ''}">${esc(catLabel(c))}</button>`;
     })
     .join('');
   $('#nform-media').innerHTML = mediaHtml(state.form.media, true);
@@ -714,17 +762,17 @@ function openNoteForm(note) {
   $('#nform-error').hidden = true;
   const now = new Date();
   if (note) {
-    $('#nform-title').textContent = '記録を直す';
+    $('#nform-title').textContent = t('nform.titleEdit');
     f.id.value = note.id;
     f.date.value = note.date;
     f.time.value = note.time;
-    f.category.value = note.category;
+    f.category.value = catLabel(note.category);
     f.text.value = note.text;
     f.author.value = note.author;
     f.important.checked = note.important;
     state.form = { patientId: note.patientId, media: [...note.media] };
   } else {
-    $('#nform-title').textContent = '記録を書く';
+    $('#nform-title').textContent = t('nform.titleNew');
     f.id.value = '';
     f.date.value = ymd(now);
     f.time.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -743,14 +791,14 @@ function uploadFile(file) {
     xhr.open('POST', '/api/upload');
     xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name));
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) $('#nform-progress').textContent = `アップロード中… ${file.name}（${Math.round((e.loaded / e.total) * 100)}%）`;
+      if (e.lengthComputable) $('#nform-progress').textContent = t('nform.uploading', { name: file.name, p: Math.round((e.loaded / e.total) * 100) });
     };
     xhr.onload = () => {
       let data = {};
       try { data = JSON.parse(xhr.responseText); } catch {}
-      xhr.status < 300 ? resolve(data) : reject(new Error(data.error || 'アップロードに失敗しました'));
+      xhr.status < 300 ? resolve(data) : reject(new Error(data.code || data.error ? errorText(data) : t('err.upload')));
     };
-    xhr.onerror = () => reject(new Error('アップロードに失敗しました'));
+    xhr.onerror = () => reject(new Error(t('err.upload')));
     xhr.send(file);
   });
 }
@@ -808,7 +856,7 @@ async function saveNote(e) {
     date: f.date.value,
     time: f.time.value,
     patientId: state.form.patientId,
-    category: f.category.value,
+    category: toCanonical(f.category.value), // どの言語の名前で入れても、保存は共通の名前
     text: f.text.value,
     author: f.author.value,
     important: f.important.checked,
@@ -819,7 +867,7 @@ async function saveNote(e) {
     if (f.id.value) await api('notes/' + f.id.value, { method: 'PUT', body });
     else await api('notes', { method: 'POST', body });
     $('#note-dialog').close();
-    toast('保存しました ✅');
+    toast(t('toast.saved'));
     refresh();
   } catch (err) {
     const el = $('#nform-error');
@@ -840,8 +888,8 @@ async function refresh() {
     state.unitName = settings.unitName || '';
     state.neighborName = settings.neighborName || '';
     state.neighborUrl = settings.neighborUrl || '';
+    renderStatic();
     renderNeighbor();
-    renderUnitName();
     renderCategoryFilter();
     await loadReminders();
     if (state.view === 'date') await loadDateView();
@@ -866,7 +914,7 @@ async function refresh() {
 
 function showView(view) {
   state.view = view;
-  $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.view === view));
+  $$('.tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.view === view));
   $$('.view').forEach((v) => (v.hidden = v.id !== 'view-' + view));
   refresh();
 }
@@ -882,8 +930,26 @@ async function poll() {
 
 // ---------- イベント ----------
 
-$$('.tab').forEach((t) => t.addEventListener('click', () => showView(t.dataset.view)));
+$$('.tab').forEach((tab) => tab.addEventListener('click', () => showView(tab.dataset.view)));
 $('#btn-new').addEventListener('click', () => openNoteForm(null));
+
+// 言語の切りかえ（この端末にだけ保存される）
+$('#btn-lang').addEventListener('click', () => {
+  $('#lang-list').innerHTML = I18N.LANGS.map((l) => {
+    const on = l.code === I18N.lang;
+    return `<button type="button" class="btn lang-opt ${on ? 'active' : ''}" data-lang="${l.code}" lang="${l.code}">${esc(l.name)}${on ? ' ✓' : ''}</button>`;
+  }).join('');
+  $('#lang-dialog').showModal();
+});
+$('#lang-list').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-lang]');
+  if (!b) return;
+  I18N.setLang(b.dataset.lang);
+  $('#lang-dialog').close();
+  renderStatic();
+  refresh();
+});
+$('#lang-close').addEventListener('click', () => $('#lang-dialog').close());
 
 $$('[data-range]').forEach((b) =>
   b.addEventListener('click', () => {
@@ -916,30 +982,30 @@ $('#patient-buttons').addEventListener('click', (e) => {
 
 // 予定（カレンダー）
 document.addEventListener('click', async (e) => {
-  const t = (sel) => e.target.closest(sel);
+  const closest = (sel) => e.target.closest(sel);
   let b;
   try {
-    if ((b = t('[data-cal]'))) {
+    if ((b = closest('[data-cal]'))) {
       const d = Number(b.dataset.cal);
       if (d === 0) {
         state.calMonth = thisMonth();
         state.calDay = ymd(new Date());
       } else state.calMonth = shiftMonth(state.calMonth, d);
       await loadCalendar();
-    } else if ((b = t('[data-day]'))) {
+    } else if ((b = closest('[data-day]'))) {
       state.calDay = b.dataset.day;
       if (b.dataset.day.slice(0, 7) !== state.calMonth) state.calMonth = b.dataset.day.slice(0, 7);
       await loadCalendar();
-    } else if ((b = t('[data-eadd]'))) openEventForm(null, b.dataset.eadd);
-    else if ((b = t('[data-eedit]'))) openEventForm(await api('events/' + b.dataset.eedit));
-    else if ((b = t('[data-erestore]'))) {
+    } else if ((b = closest('[data-eadd]'))) openEventForm(null, b.dataset.eadd);
+    else if ((b = closest('[data-eedit]'))) openEventForm(await api('events/' + b.dataset.eedit));
+    else if ((b = closest('[data-erestore]'))) {
       await api(`events/${b.dataset.erestore}/restore`, { method: 'POST' });
-      toast('元に戻しました ✅');
+      toast(t('toast.restored'));
       refresh();
-    } else if ((b = t('[data-epurge]'))) {
-      if (!(await askConfirm('この予定を完全に消しますか？\n二度と元に戻せません。'))) return;
+    } else if ((b = closest('[data-epurge]'))) {
+      if (!(await askConfirm(t('event.confirmPurge')))) return;
       await api(`events/${b.dataset.epurge}/purge`, { method: 'DELETE' });
-      toast('完全に消しました');
+      toast(t('toast.purged'));
       refresh();
     }
   } catch (err) {
@@ -958,14 +1024,11 @@ $('#event-form').addEventListener('click', (e) => {
 });
 $('#eform-delete').addEventListener('click', async () => {
   const id = $('#event-form').id.value;
-  const msg = state.eventForm.repeat
-    ? 'この予定をゴミ箱に移しますか？\n（くり返しの予定は、すべての回が消えます）'
-    : 'この予定をゴミ箱に移しますか？\n（ゴミ箱から元に戻せます）';
-  if (!(await askConfirm(msg))) return;
+  if (!(await askConfirm(t(state.eventForm.repeat ? 'event.confirmTrashRepeat' : 'event.confirmTrash')))) return;
   try {
     await api('events/' + id, { method: 'DELETE' });
     $('#event-dialog').close();
-    toast('ゴミ箱に移しました');
+    toast(t('toast.trashed'));
     refresh();
   } catch (err) {
     toast(err.message);
@@ -994,7 +1057,7 @@ async function printView() {
   if (state.view === 'summary') {
     $('#print-title').textContent = summaryTitle();
   } else if (state.view === 'report') {
-    $('#print-title').textContent = `月間評価 ${jpMonth(state.month)}`;
+    $('#print-title').textContent = t('title.report', { month: fmtMonth(state.month) });
   } else {
     $('#print-title').textContent = currentQuery().title;
     const list = state.lists[state.view];
@@ -1013,7 +1076,7 @@ document.addEventListener('click', (e) => {
 
 // 記録の「直す」「消す」・ゴミ箱・写真の拡大
 document.addEventListener('click', async (e) => {
-  const t = (sel) => e.target.closest(sel);
+  const closest = (sel) => e.target.closest(sel);
   const run = async (fn, msg) => {
     try {
       await fn();
@@ -1024,27 +1087,27 @@ document.addEventListener('click', async (e) => {
     }
   };
   let b;
-  if ((b = t('[data-edit]'))) {
+  if ((b = closest('[data-edit]'))) {
     try { openNoteForm(await api('notes/' + b.dataset.edit)); } catch (err) { toast(err.message); }
-  } else if ((b = t('[data-del]'))) {
-    if (await askConfirm('この記録をゴミ箱に移しますか？\n（ゴミ箱から元に戻せます）')) run(() => api('notes/' + b.dataset.del, { method: 'DELETE' }), 'ゴミ箱に移しました');
-  } else if ((b = t('[data-nrestore]'))) {
-    run(() => api(`notes/${b.dataset.nrestore}/restore`, { method: 'POST' }), '元に戻しました ✅');
-  } else if ((b = t('[data-npurge]'))) {
-    if (await askConfirm('この記録を完全に消しますか？\n二度と元に戻せません。')) run(() => api(`notes/${b.dataset.npurge}/purge`, { method: 'DELETE' }), '完全に消しました');
-  } else if ((b = t('[data-prestore]'))) {
-    run(() => api(`patients/${b.dataset.prestore}/restore`, { method: 'POST' }), '元に戻しました ✅');
-  } else if ((b = t('[data-ppurge]'))) {
-    if (await askConfirm('この方の情報と、この方に関係する記録・予定をすべて完全に消しますか？\n二度と元に戻せません。')) {
-      run(() => api(`patients/${b.dataset.ppurge}/purge`, { method: 'DELETE' }), '完全に消しました');
+  } else if ((b = closest('[data-del]'))) {
+    if (await askConfirm(t('note.confirmTrash'))) run(() => api('notes/' + b.dataset.del, { method: 'DELETE' }), t('toast.trashed'));
+  } else if ((b = closest('[data-nrestore]'))) {
+    run(() => api(`notes/${b.dataset.nrestore}/restore`, { method: 'POST' }), t('toast.restored'));
+  } else if ((b = closest('[data-npurge]'))) {
+    if (await askConfirm(t('note.confirmPurge'))) run(() => api(`notes/${b.dataset.npurge}/purge`, { method: 'DELETE' }), t('toast.purged'));
+  } else if ((b = closest('[data-prestore]'))) {
+    run(() => api(`patients/${b.dataset.prestore}/restore`, { method: 'POST' }), t('toast.restored'));
+  } else if ((b = closest('[data-ppurge]'))) {
+    if (await askConfirm(t('patient.confirmPurge'))) {
+      run(() => api(`patients/${b.dataset.ppurge}/purge`, { method: 'DELETE' }), t('toast.purged'));
     }
-  } else if ((b = t('[data-tview]'))) {
+  } else if ((b = closest('[data-tview]'))) {
     state.openTrash = state.openTrash === b.dataset.tview ? null : b.dataset.tview;
     loadTrash().catch((err) => toast(err.message));
-  } else if ((b = t('[data-more]'))) {
+  } else if ((b = closest('[data-more]'))) {
     state.lists[b.dataset.more].count += PAGE;
     (b.dataset.more === 'date' ? loadDateView() : loadPatientView()).catch((err) => toast(err.message));
-  } else if ((b = t('.media-item')) && !t('[data-remove]')) {
+  } else if ((b = closest('.media-item')) && !closest('[data-remove]')) {
     const el = document.createElement(b.dataset.type === 'video' ? 'video' : 'img');
     el.src = b.dataset.src;
     if (b.dataset.type === 'video') Object.assign(el, { controls: true, autoplay: true, playsInline: true });
@@ -1070,7 +1133,7 @@ $('#note-form').addEventListener('click', (e) => {
   const c = e.target.closest('[data-fcat]');
   const r = e.target.closest('[data-remove]');
   if (p) state.form.patientId = p.dataset.fpid || null;
-  else if (c) $('#note-form').category.value = c.dataset.fcat;
+  else if (c) $('#note-form').category.value = catLabel(c.dataset.fcat);
   else if (r) {
     e.preventDefault();
     e.stopPropagation();
@@ -1083,10 +1146,10 @@ $('#note-form').addEventListener('click', (e) => {
 // アドレスをまちがえていないか、ためしに開く
 $('#neighbor-test').addEventListener('click', () => {
   let url = $('#unit-form').neighborUrl.value.trim();
-  if (!url) return toast('アドレスを入れてください');
+  if (!url) return toast(t('toast.needUrl'));
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) url = 'http://' + url;
-  if (!/^https?:\/\//i.test(url)) return toast('アドレスが正しくありません');
-  window.open(url, '_blank', 'noopener');
+  if (!/^https?:\/\//i.test(url)) return toast(t('err.urlInvalid'));
+  window.open(withLang(url), '_blank', 'noopener');
 });
 $('#unit-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -1097,7 +1160,7 @@ $('#unit-form').addEventListener('submit', async (e) => {
     f.unitName.value = saved.unitName;
     f.neighborName.value = saved.neighborName;
     f.neighborUrl.value = saved.neighborUrl;
-    toast('保存しました ✅');
+    toast(t('toast.saved'));
     refresh();
   } catch (err) {
     toast(err.message);
@@ -1111,11 +1174,11 @@ $('#slot-list').addEventListener('click', async (e) => {
   else if (edit) openPatientForm(state.patients.find((x) => x.id === edit.dataset.pedit));
   else if (del) {
     const p = state.patients.find((x) => x.id === del.dataset.pdel);
-    if (!(await askConfirm(`${p.name} 様を削除しますか？\n\n・この枠は「空き」になり、新しい方を登録できます\n・この方の記録と予定はすべてゴミ箱に移り、あとから元に戻せます`))) return;
+    if (!(await askConfirm(t('patient.confirmDelete', { name: t('patient.person', { name: p.name }) })))) return;
     api('patients/' + p.id, { method: 'DELETE' })
       .then(() => {
         if (state.selectedPatient === p.id) state.selectedPatient = null;
-        toast('削除しました（ゴミ箱に移しました）');
+        toast(t('toast.patientTrashed'));
         refresh();
       })
       .catch((err) => toast(err.message));
@@ -1129,7 +1192,7 @@ $('#patient-form').addEventListener('submit', async (e) => {
     if (f.id.value) await api('patients/' + f.id.value, { method: 'PUT', body });
     else await api('patients', { method: 'POST', body });
     $('#patient-dialog').close();
-    toast('保存しました ✅');
+    toast(t('toast.saved'));
     refresh();
   } catch (err) {
     const el = $('#pform-error');
@@ -1143,12 +1206,15 @@ $('#pform-cancel').addEventListener('click', () => $('#patient-dialog').close())
 api('info')
   .then((info) => {
     state.slots = info.slots;
-    $('#trash-days').textContent = info.trashDays;
+    state.trashDays = info.trashDays;
+    state.addresses = info.addresses || [];
+    state.port = info.port;
+    renderStatic();
     if (state.view === 'manage') renderSlots();
-    const urls = info.addresses.map((ip) => `<code>http://${ip}:${info.port}</code>`).join('<br>');
-    $('#server-info').innerHTML = `💻 ほかのパソコン・タブレットからは、同じネットワークにつないで次のアドレスを開いてください：<br>${urls || '（ネットワークが見つかりません）'}`;
   })
   .catch(() => {});
 
+I18N.init();
+renderStatic();
 refresh();
 setInterval(poll, 10000);

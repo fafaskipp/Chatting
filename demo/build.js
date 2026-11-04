@@ -8,6 +8,8 @@ const read = (f) => fs.readFileSync(path.join(repo, 'public', f), 'utf8');
 const html = read('index.html');
 const css = read('style.css');
 let app = read('app.js');
+// 言語ファイルと切りかえの仕組みも、ひとつの HTML の中に入れる
+const i18n = ['lang/ja.js', 'lang/id.js', 'lang/si.js', 'i18n.js'].map(read).join('\n');
 const mock = fs.readFileSync(path.join(repo, 'lib', 'store.js'), 'utf8') + '\n' + fs.readFileSync(path.join(__dirname, 'mock.js'), 'utf8');
 
 const swap = (from, to) => {
@@ -17,11 +19,11 @@ const swap = (from, to) => {
 swap('/uploads/${esc(m.file)}', '${esc(demoMedia(m.file))}');
 swap('function uploadFile(file) {', 'function uploadFile(file) {\n  return demoUpload(file);\n}\nfunction uploadFileServer(file) {');
 
-let body = html.slice(html.indexOf('<body>') + 6, html.indexOf('</body>')).replace(/<script src="app.js"><\/script>/, '');
+let body = html.slice(html.indexOf('<body>') + 6, html.indexOf('</body>')).replace(/<script src="[^"]+"><\/script>\s*/g, '');
 body = body.replace('<main>', `<main>
     <div class="demo-banner">
-      <div>🧪 <b>デモ版</b>（試すための版です）　データはこの端末のブラウザの中だけに保存されます。<br>印刷・ほかの端末との共有は、パソコンで動かす本番版で使えます。</div>
-      <button type="button" class="btn btn-gray" id="demo-reset">↺ サンプルに戻す</button>
+      <div data-i18n-html="demo.banner"></div>
+      <button type="button" class="btn btn-gray" id="demo-reset" data-i18n="demo.reset"></button>
     </div>`);
 
 const demoCss = `
@@ -36,13 +38,17 @@ main { padding-left: max(16px, env(safe-area-inset-left, 0px)) !important; paddi
 
 const demoJs = `
 document.getElementById('demo-reset').addEventListener('click', async () => {
-  if (await askConfirm('入力したデータを消して、最初のサンプルに戻しますか？')) { demoReset(); location.reload(); }
+  if (await askConfirm(t('demo.resetConfirm'))) { demoReset(); location.reload(); }
 });
-window.addEventListener('demo-storage-full', () => toast('保存できる容量がいっぱいです。写真を減らしてください'));
-setTimeout(() => {
-  const info = document.getElementById('server-info');
-  if (info) info.textContent = '💻 本番版では、ここにほかのパソコン・タブレットから開くアドレスが表示されます。';
-}, 300);
+window.addEventListener('demo-storage-full', () => toast(t('demo.storageFull')));
+// デモにはサーバーのアドレスがないので、その説明に差しかえる
+const renderStaticReal = renderStatic;
+renderStatic = function () {
+  renderStaticReal();
+  document.getElementById('server-info').textContent = t('demo.serverInfo');
+};
+I18N.applyStatic();
+renderStatic();
 `;
 
 const page = `<title>介護日記 デモ</title>
@@ -52,6 +58,9 @@ ${css}
 ${demoCss}
 </style>
 ${body}
+<script>
+${i18n}
+</script>
 <script>
 ${mock}
 </script>

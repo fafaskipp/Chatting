@@ -23,6 +23,9 @@ body {
   font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Meiryo", "Noto Sans JP", sans-serif;
   line-height: 1.6;
 }
+/* シンハラ語：端末に入っているシンハラ文字を使う（Windows は Nirmala UI、iPad は Sinhala Sangam MN など）。字が高いので行をゆったり */
+:lang(si) { font-family: "Nirmala UI", "Iskoola Pota", "Noto Sans Sinhala", "Sinhala Sangam MN", "Yu Gothic UI", "Meiryo", sans-serif; }
+:lang(si) body, body:lang(si) { line-height: 1.75; }
 
 button, input, textarea, select { font: inherit; color: inherit; }
 
@@ -39,6 +42,15 @@ button, input, textarea, select { font: inherit; color: inherit; }
   color: #fff;
 }
 .topbar h1 { margin: 0; font-size: 1.5rem; min-width: 0; overflow-wrap: anywhere; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.btn-lang {
+  min-height: 52px; padding: 8px 12px; font-size: 1rem; background: rgba(255, 255, 255, .18); border: 2px solid rgba(255, 255, 255, .7);
+  box-shadow: none;
+}
+.btn-lang:focus-visible { outline: 3px solid #f2b705; outline-offset: 2px; }
+.lang-list { display: grid; gap: 10px; }
+.lang-opt { background: #fff; color: var(--text); border: 3px solid var(--blue); box-shadow: none; min-height: 64px; font-size: 1.25rem; }
+.lang-opt.active { background: var(--blue); color: #fff; }
 
 .tabs {
   display: grid;
@@ -347,6 +359,14 @@ dialog h2 { margin: 0; }
   :root { font-size: 17px; }
   .topbar h1 { font-size: 1.2rem; }
   .btn-new { padding: 8px 14px; font-size: 1.05rem; }
+  .topbar { padding-left: 10px; padding-right: 10px; gap: 8px; }
+  /* インドネシア語・シンハラ語は言葉が長いので、メニューと「今日・昨日…」のボタンを画面の幅におさめる */
+  .tabs { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  :lang(id) .tab .lb, :lang(si) .tab .lb { font-size: min(.8rem, 2.75vw); letter-spacing: -.02em; }
+  :lang(id) .quick, :lang(si) .quick { display: flex; flex-wrap: wrap; }
+  :lang(id) .chip-btn, :lang(si) .chip-btn { flex: 1 1 auto; white-space: nowrap; padding-left: 12px; padding-right: 12px; }
+  .topbar-actions { gap: 6px; }
+  .btn-lang { padding: 6px 10px; font-size: .95rem; min-height: 46px; }
   /* スマホ：タブは画面の下に固定 */
   body { padding-bottom: 76px; }
   .tabs {
@@ -401,4 +421,11 @@ dialog h2 { margin: 0; }
 }
 .neighbor-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #1a237e; }
 .neighbor-btn:focus-visible { outline: 3px solid #f2b705; outline-offset: 3px; }
+
+/* とても小さい画面（幅360px以下）：上の帯をつめる */
+@media (max-width: 360px) {
+  .topbar h1 { font-size: 1.05rem; }
+  .btn-new { padding: 6px 10px; font-size: .95rem; }
+  .btn-lang { padding: 6px 8px; }
+}
 
