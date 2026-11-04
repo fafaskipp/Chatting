@@ -9,7 +9,7 @@ const html = read('index.html');
 const css = read('style.css');
 let app = read('app.js');
 // 言語ファイルと切りかえの仕組みも、ひとつの HTML の中に入れる
-const i18n = ['lang/ja.js', 'lang/id.js', 'lang/si.js', 'i18n.js'].map(read).join('\n');
+const i18n = ['lang/ja.js', 'lang/id.js', 'lang/en.js', 'i18n.js'].map(read).join('\n');
 const mock = fs.readFileSync(path.join(repo, 'lib', 'store.js'), 'utf8') + '\n' + fs.readFileSync(path.join(__dirname, 'mock.js'), 'utf8');
 
 const swap = (from, to) => {

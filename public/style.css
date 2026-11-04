@@ -23,9 +23,6 @@ body {
   font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Meiryo", "Noto Sans JP", sans-serif;
   line-height: 1.6;
 }
-/* シンハラ語：端末に入っているシンハラ文字を使う（Windows は Nirmala UI、iPad は Sinhala Sangam MN など）。字が高いので行をゆったり */
-:lang(si) { font-family: "Nirmala UI", "Iskoola Pota", "Noto Sans Sinhala", "Sinhala Sangam MN", "Yu Gothic UI", "Meiryo", sans-serif; }
-:lang(si) body, body:lang(si) { line-height: 1.75; }
 
 button, input, textarea, select { font: inherit; color: inherit; }
 
@@ -362,9 +359,9 @@ dialog h2 { margin: 0; }
   .topbar { padding-left: 10px; padding-right: 10px; gap: 8px; }
   /* インドネシア語・シンハラ語は言葉が長いので、メニューと「今日・昨日…」のボタンを画面の幅におさめる */
   .tabs { grid-template-columns: repeat(7, minmax(0, 1fr)); }
-  :lang(id) .tab .lb, :lang(si) .tab .lb { font-size: min(.8rem, 2.75vw); letter-spacing: -.02em; }
-  :lang(id) .quick, :lang(si) .quick { display: flex; flex-wrap: wrap; }
-  :lang(id) .chip-btn, :lang(si) .chip-btn { flex: 1 1 auto; white-space: nowrap; padding-left: 12px; padding-right: 12px; }
+  :lang(id) .tab .lb, :lang(en) .tab .lb { font-size: min(.8rem, 2.75vw); letter-spacing: -.02em; }
+  :lang(id) .quick, :lang(en) .quick { display: flex; flex-wrap: wrap; }
+  :lang(id) .chip-btn, :lang(en) .chip-btn { flex: 1 1 auto; white-space: nowrap; padding-left: 12px; padding-right: 12px; }
   .topbar-actions { gap: 6px; }
   .btn-lang { padding: 6px 10px; font-size: .95rem; min-height: 46px; }
   /* スマホ：タブは画面の下に固定 */

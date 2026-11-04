@@ -7,7 +7,7 @@ const path = require('path');
 const vm = require('vm');
 
 const root = path.join(__dirname, '..');
-const LANGS = ['ja', 'id', 'si'];
+const LANGS = ['ja', 'id', 'en'];
 const dict = {};
 for (const code of LANGS) {
   const sandbox = { window: {} };

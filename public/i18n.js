@@ -1,5 +1,5 @@
 // 介護日記 — 言語の切りかえ（インターネットなしで動く）
-// 文章は public/lang/ の中の、言語ごとのファイル（ja.js / id.js / si.js）にあります。
+// 文章は public/lang/ の中の、言語ごとのファイル（ja.js / id.js / en.js）にあります。
 // 新しい言語を足すときは、ja.js をコピーして訳し、下の LANGS に1行足します。
 'use strict';
 
@@ -7,7 +7,7 @@
   const LANGS = [
     { code: 'ja', name: '日本語', short: 'JA' },
     { code: 'id', name: 'Bahasa Indonesia', short: 'ID' },
-    { code: 'si', name: 'සිංහල', short: 'SI' },
+    { code: 'en', name: 'English', short: 'EN' },
   ];
   const STORE_KEY = 'kaigo-lang';
   const dict = (window.KAIGO_LANG = window.KAIGO_LANG || {});
@@ -88,10 +88,8 @@
       }
     } catch {}
     if (!code) code = readSaved();
-    if (!supported(code)) {
-      const nav = String(navigator.language || '').slice(0, 2).toLowerCase();
-      code = supported(nav) ? nav : 'ja';
-    }
+    // 保存も指定もないときは日本語（パソコンのことば設定では決めない）
+    if (!supported(code)) code = 'ja';
     setLang(code, { persist: false });
   }
 

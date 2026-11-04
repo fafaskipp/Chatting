@@ -17,7 +17,7 @@ import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-NLLB = {"ja": "jpn_Jpan", "id": "ind_Latn", "si": "sin_Sinh"}
+NLLB = {"ja": "jpn_Jpan", "id": "ind_Latn", "en": "eng_Latn"}
 MAX_SEG = 180  # 1つの文がこれより長いときは「、」などで切る
 
 
@@ -126,7 +126,7 @@ def make_handler(service):
                 n = int(self.headers.get("Content-Length", "0"))
                 body = json.loads(self.rfile.read(n).decode("utf-8"))
                 texts = [str(t) for t in body.get("texts", [])][:20]
-                targets = [t for t in body.get("targets", []) if t in ("id", "si")]
+                targets = [t for t in body.get("targets", []) if t in ("id", "en")]
                 out = {t: [service.translate_text(x, t) if x.strip() else "" for x in texts] for t in targets}
                 self._send(200, out)
             except Exception as err:  # noqa: BLE001
@@ -147,7 +147,7 @@ def main():
     backend = FakeBackend() if a.fake else Ct2Backend(a.model)
     service = Service(backend)
     if a.test:
-        for t in ("id", "si"):
+        for t in ("id", "en"):
             print(t, "→", service.translate_text(a.test, t))
         return
     srv = ThreadingHTTPServer(("127.0.0.1", a.port), make_handler(service))
