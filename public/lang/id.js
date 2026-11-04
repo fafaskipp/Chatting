@@ -243,6 +243,13 @@
   'pform.memoPh': 'Contoh: alergi telur',
   'server.info': '💻 Dari komputer atau tablet lain, sambungkan ke jaringan yang sama lalu buka alamat berikut:',
   'server.noNet': '(jaringan tidak ditemukan)',
+  'note.trLabel': '🤖 Terjemahan otomatis (hanya acuan)',
+  'note.orig': 'Asli: ',
+  'note.trPending': '⏳ Terjemahan sedang dibuat…',
+  'note.trFailed': 'Tidak bisa diterjemahkan',
+  'server.trOn': '🌐 Terjemahan otomatis: aktif',
+  'server.trStarting': '🌐 Terjemahan otomatis: sedang disiapkan…',
+  'server.trOff': '🌐 Terjemahan otomatis: belum dipasang (hanya bahasa Jepang)',
 
   'trash.hint': 'Yang dihapus masuk ke sini. Tekan “↩️ Kembalikan” untuk mengembalikannya.<br>Isi tempat sampah <b>terhapus permanen otomatis setelah {n} hari</b>.',
   'trash.empty': 'Tempat sampah kosong.',

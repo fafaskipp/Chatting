@@ -135,6 +135,29 @@ function renderUnitName() {
 const toCanonical = (text) => I18N.catCanonical(text);
 
 // ことばを変えたときにも作り直す画面の部分（言語・ユニット名・説明の文章）
+// 日本語で書かれた記録・予定の自動翻訳（オフライン）。原文はいつも残し、翻訳は「自動翻訳」と分かるようにして並べる
+function trOf(x) {
+  return I18N.lang !== 'ja' && x && x.tr && x.tr[I18N.lang] ? x.tr[I18N.lang] : null;
+}
+function trField(x, f) {
+  const tr = trOf(x);
+  return tr && tr[f] ? tr[f] : x[f];
+}
+function trHint(x) {
+  if (I18N.lang === 'ja' || !x.trState || x.trState === 'done') return '';
+  return `<div class="tr-hint">${x.trState === 'pending' ? th('note.trPending') : th('note.trFailed')}</div>`;
+}
+function textBlock(x, field, cls) {
+  const tr = trOf(x);
+  if (!x[field]) return '';
+  if (tr && tr[field]) {
+    return `<div class="${cls} tr-text">${esc(tr[field])}</div>
+      <div class="tr-label">${th('note.trLabel')}</div>
+      <div class="${cls} tr-orig"><span class="orig-label">${th('note.orig')}</span>${esc(x[field])}</div>`;
+  }
+  return `<div class="${cls}">${esc(x[field])}</div>${trHint(x)}`;
+}
+
 function renderStatic() {
   const cur = I18N.LANGS.find((l) => l.code === I18N.lang);
   $('#lang-code').textContent = cur ? cur.short : 'JA';
@@ -142,7 +165,8 @@ function renderStatic() {
   $('#slot-hint').innerHTML = th('manage.hint', { n: state.slots });
   $('#trash-hint').innerHTML = th('trash.hint', { n: state.trashDays });
   const urls = state.addresses.map((ip) => `<code>http://${esc(ip)}:${state.port}</code>`).join('<br>');
-  $('#server-info').innerHTML = `${esc(t('server.info'))}<br>${urls || esc(t('server.noNet'))}`;
+  const trKey = !state.tr || !state.tr.installed ? 'server.trOff' : state.tr.state === 'ready' ? 'server.trOn' : 'server.trStarting';
+  $('#server-info').innerHTML = `${esc(t('server.info'))}<br>${urls || esc(t('server.noNet'))}<br><span class="tr-status">${esc(t(trKey))}</span>`;
 }
 
 // となりのユニットへ行くとき、今の言語も持っていく（アドレスが変わると端末の言語の保存先も変わるため）
@@ -221,7 +245,7 @@ function noteHtml(n, showPatient, mode = 'normal', nameOverride) {
         ${showPatient ? patient : ''}
         <span class="tag" style="background:${catColor(n.category)}">${esc(catLabel(n.category))}</span>
       </div>
-      ${n.text ? `<div class="note-text">${esc(n.text)}</div>` : ''}
+      ${textBlock(n, 'text', 'note-text')}
       ${n.media.length ? `<div class="media-grid">${mediaHtml(n.media, false)}</div>` : ''}
       <div class="note-foot">
         <span>${n.author ? th('note.author', { name: n.author }) : ''}</span>
@@ -380,9 +404,10 @@ function eventHtml(e, withDate) {
   return `<div class="event-item">
     <div class="ev-time">${withDate ? esc(t('date.dayOnly', { d: Number(e.date.slice(8, 10)) })) + '<br>' : ''}${e.time ? esc(e.time) : esc(t('event.allDay'))}</div>
     <div class="ev-body">
-      <div class="title">${esc(e.title)}</div>
+      <div class="title">${esc(trField(e, 'title'))}</div>
+      ${trOf(e) && trOf(e).title ? `<div class="tr-orig-line">${th('note.orig')}${esc(e.title)}</div>` : ''}
       <div class="chips">${who}${e.repeat ? `<span class="tag tag-none">🔁 ${esc(repeatLabel(e.repeat))}</span>` : ''}</div>
-      ${e.memo ? `<div class="text">${esc(e.memo)}</div>` : ''}
+      ${textBlock(e, 'memo', 'text')}${e.memo ? '' : trHint(e)}
     </div>
     <button class="btn btn-edit" data-eedit="${e.id}">${th('btn.edit')}</button>
   </div>`;
@@ -415,7 +440,7 @@ async function loadCalendar() {
         ].join(' ');
         return `<button type="button" class="cal-cell ${cls}" data-day="${d}">
           <span class="dnum">${Number(d.slice(8, 10))}</span>
-          ${list.slice(0, 3).map((e) => `<span class="cal-ev" style="background:${eventColor(e)}">${e.time ? esc(e.time) + ' ' : ''}${esc(e.title)}</span>`).join('')}
+          ${list.slice(0, 3).map((e) => `<span class="cal-ev" style="background:${eventColor(e)}">${e.time ? esc(e.time) + ' ' : ''}${esc(trField(e, 'title'))}</span>`).join('')}
           ${list.length > 3 ? `<span class="cal-more">${th('cal.more', { n: list.length - 3 })}</span>` : ''}
         </button>`;
       })
@@ -447,7 +472,7 @@ async function loadReminders() {
   badge.textContent = todays.length;
   const tomorrows = list.filter((e) => e.date === tomorrow);
   const line = (e) =>
-    `<div>•\u2003${e.time ? esc(e.time) + '\u2003' : ''}<b>${esc(e.title)}</b>${e.patientId ? th('reminder.who', { name: t('patient.person', { name: patientName(e.patientId) }) }) : ''}</div>`;
+    `<div>•\u2003${e.time ? esc(e.time) + '\u2003' : ''}<b>${esc(trField(e, 'title'))}</b>${e.patientId ? th('reminder.who', { name: t('patient.person', { name: patientName(e.patientId) }) }) : ''}</div>`;
   $('#reminder').innerHTML = list.length
     ? `<div class="reminder">
         ${todays.length ? `<h3>${th('reminder.today', { n: todays.length })}</h3>${todays.map(line).join('')}` : ''}
@@ -545,7 +570,7 @@ function miniNoteHtml(n) {
   return `<div class="mini-note" style="border-color:${catColor(n.category)}">
     <span class="when">${esc(fmtDate(n.date, false))} ${esc(n.time)}</span>
     <span class="tag" style="background:${catColor(n.category)}">${esc(catLabel(n.category))}</span>
-    ${n.text ? `<div class="text">${esc(n.text)}</div>` : ''}
+    ${textBlock(n, 'text', 'text')}
   </div>`;
 }
 
@@ -1203,16 +1228,21 @@ $('#patient-form').addEventListener('submit', async (e) => {
 $('#pform-cancel').addEventListener('click', () => $('#patient-dialog').close());
 
 // 他の端末からの接続先を表示
-api('info')
+function loadInfo() {
+  return api('info')
   .then((info) => {
     state.slots = info.slots;
     state.trashDays = info.trashDays;
     state.addresses = info.addresses || [];
     state.port = info.port;
+    state.tr = info.translator;
     renderStatic();
     if (state.view === 'manage') renderSlots();
   })
   .catch(() => {});
+}
+loadInfo();
+setInterval(loadInfo, 30000);
 
 I18N.init();
 renderStatic();

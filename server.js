@@ -7,6 +7,7 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { createStore, localDate } = require('./lib/store');
+const { createTranslator } = require('./lib/translator');
 
 const PORT = Number(process.env.PORT) || 3000;
 const ROOT = __dirname;
@@ -68,8 +69,13 @@ function loadDb() {
   }
 }
 
+const translatorInstalled =
+  process.env.KAIGO_TRANSLATE !== 'off' &&
+  (Boolean(process.env.TRANSLATOR_URL) || process.env.TRANSLATOR_FAKE === '1' || fs.existsSync(path.join(__dirname, 'translator', 'model')));
+
 const store = createStore({
   db: loadDb(),
+  translate: translatorInstalled,
   slotCount: SLOT_COUNT,
   trashDays: TRASH_DAYS,
   newId,
@@ -188,7 +194,7 @@ async function handleApi(req, res, url) {
   const method = req.method;
 
   if (resource === 'info' && method === 'GET') {
-    return sendJson(res, 200, { addresses: lanAddresses(), port: PORT, slots: SLOT_COUNT, trashDays: TRASH_DAYS });
+    return sendJson(res, 200, { addresses: lanAddresses(), port: PORT, slots: SLOT_COUNT, trashDays: TRASH_DAYS, translator: translator.status() });
   }
 
   // 写真・動画のアップロード（本文はファイルそのもの）
@@ -299,6 +305,12 @@ function housekeeping() {
     console.error(err);
   }
 }
+
+const translator = createTranslator({ store, rootDir: __dirname });
+translator.start();
+process.on('exit', () => translator.stop());
+process.on('SIGINT', () => process.exit(0));
+process.on('SIGTERM', () => process.exit(0));
 
 dailyBackup();
 housekeeping();

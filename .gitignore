@@ -1,3 +1,6 @@
 data/
-node_modules/
 demo/kaigo-demo.html
+node_modules/
+translator/model/
+translator/venv/
+translator/wheels/
