@@ -46,8 +46,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
 }
 .btn-lang:focus-visible { outline: 3px solid #f2b705; outline-offset: 2px; }
 .lang-list { display: grid; gap: 10px; }
-.lang-opt { background: #fff; color: var(--text); border: 3px solid var(--blue); box-shadow: none; min-height: 64px; font-size: 1.25rem; }
-.lang-opt.active { background: var(--blue); color: #fff; }
+.btn.lang-opt { background: #fff; color: var(--text); border: 3px solid var(--blue); box-shadow: none; min-height: 64px; font-size: 1.25rem; }
+.btn.lang-opt.active { background: var(--blue); color: #fff; }
 
 .tabs {
   display: grid;
