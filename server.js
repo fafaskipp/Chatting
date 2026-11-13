@@ -71,7 +71,7 @@ function loadDb() {
 
 const translatorInstalled =
   process.env.KAIGO_TRANSLATE !== 'off' &&
-  (Boolean(process.env.TRANSLATOR_URL) || process.env.TRANSLATOR_FAKE === '1' || fs.existsSync(path.join(__dirname, 'translator', 'model')));
+  (Boolean(process.env.TRANSLATOR_URL) || process.env.TRANSLATOR_FAKE === '1' || fs.existsSync(path.join(__dirname, 'translator', 'model', 'model.bin')));
 
 const store = createStore({
   db: loadDb(),

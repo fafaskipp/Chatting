@@ -82,9 +82,72 @@ class Ct2Backend:
         return [self.sp.decode(r.hypotheses[0][1:]).strip() for r in res]
 
 
+GLOSSARY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "glossary.json")
+
+
+class Glossary:
+    """介護の言葉の決まった訳。機械翻訳は専門用語を間違えやすい（例：褥瘡→「貝」）ので、
+    その言葉を「Q1」のような印に置きかえて翻訳し、あとで決まった訳に戻す。"""
+
+    def __init__(self, path=GLOSSARY_FILE):
+        self.path = path
+        self.mtime = None
+        self.terms = {}
+
+    def load(self):
+        try:
+            m = os.path.getmtime(self.path)
+            if m != self.mtime:
+                with open(self.path, encoding="utf-8") as f:
+                    raw = json.load(f)
+                self.terms = {k: v for k, v in raw.items() if isinstance(v, dict)}
+                self.mtime = m
+        except (OSError, ValueError) as err:
+            sys.stderr.write("glossary: %r\n" % (err,))
+
+    def protect(self, seg, target):
+        """seg の中の用語を印に置きかえる。戻り値: (置きかえた文, [(印, 訳, 元の言葉)])"""
+        self.load()
+        found = []
+        for term in sorted(self.terms, key=len, reverse=True):
+            if term in seg and self.terms[term].get(target):
+                key = "Q%d" % (len(found) + 1)
+                seg = seg.replace(term, key)
+                found.append((key, self.terms[term][target], term))
+        return seg, found
+
+    def pieces(self, seg, target):
+        """seg を「ふつうの文字」と「用語」の並びに分ける。印が消えたときの代わりの方法で使う。"""
+        self.load()
+        terms = [t for t in sorted(self.terms, key=len, reverse=True) if self.terms[t].get(target)]
+        if not terms:
+            return [("text", seg)]
+        out = []
+        for part in re.split("(" + "|".join(re.escape(t) for t in terms) + ")", seg):
+            if not part:
+                continue
+            out.append(("term", self.terms[part][target]) if part in self.terms and part in terms else ("text", part))
+        return out
+
+    @staticmethod
+    def has_all(out, found):
+        return all(re.search(r"(?<![A-Za-z0-9])%s(?![0-9])" % key, out) for key, _, _ in found)
+
+    @staticmethod
+    def restore(out, found):
+        for key, word, term in found:
+            if re.search(r"(?<![A-Za-z0-9])%s(?![0-9])" % key, out):
+                out = re.sub(r"(?<![A-Za-z0-9])%s(?![0-9])" % key, word, out)
+            else:
+                # 印が消えた（まれ）→ 末尾に用語を添えて、意味が落ちないようにする
+                out = "%s [%s = %s]" % (out, term, word)
+        return out
+
+
 class Service:
-    def __init__(self, backend):
+    def __init__(self, backend, glossary=None):
         self.backend = backend
+        self.glossary = glossary or Glossary()
         self.cache = {}
 
     def translate_text(self, text, target):
@@ -93,7 +156,24 @@ class Service:
             return self.cache[key]
         lines = split_segments(text)
         flat = [s for segs in lines for s in segs if needs_translation(s)]
-        done = dict(zip(flat, self.backend.translate(flat, target))) if flat else {}
+        prot = {s: self.glossary.protect(s, target) for s in flat}
+        raw = self.backend.translate([prot[s][0] for s in flat], target) if flat else []
+        done = {}
+        for s, o in zip(flat, raw):
+            found = prot[s][1]
+            if found and not self.glossary.has_all(o, found):
+                # 印が消えた → 用語以外の部分を別々に翻訳して、決まった訳とつなぐ（「内科受診」のような短い言葉用）
+                parts = [
+                    (k, p)
+                    for k, p in self.glossary.pieces(s, target)
+                    # 「を」「しました。」のような助詞・語尾だけの部分は、単独で訳すとおかしくなるので省く
+                    if not (k == "text" and re.fullmatch(r"[\u3040-\u309f、。\s]{1,6}", p))
+                ]
+                texts = [p for k, p in parts if k == "text" and needs_translation(p)]
+                tr = iter(self.backend.translate(texts, target)) if texts else iter(())
+                done[s] = " ".join(next(tr) if (k == "text" and needs_translation(p)) else p for k, p in parts).strip()
+            else:
+                done[s] = self.glossary.restore(o, found)
         result = "\n".join(" ".join(done.get(s, s) for s in segs) for segs in lines)
         if len(self.cache) > 500:
             self.cache.clear()

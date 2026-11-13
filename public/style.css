@@ -429,7 +429,7 @@ dialog h2 { margin: 0; }
 
 /* 自動翻訳（原文はいつも残す） */
 .tr-text { background: #eef6ff; border-radius: 10px; padding: 8px 10px; }
-.tr-label { font-size: .78rem; color: #5b6b7a; margin: 4px 2px 6px; font-weight: 700; }
+.tr-label { font-size: .78rem; color: #5b6b7a; margin: 4px 2px 6px; font-weight: 600; line-height: 1.45; }
 .tr-orig { color: #444; font-size: .95em; border-left: 4px solid #cfd8dc; padding-left: 10px; }
 .orig-label { font-weight: 800; color: #607d8b; margin-right: 4px; }
 .tr-orig-line { font-size: .82rem; color: #607d8b; margin: 2px 0 4px; }

@@ -242,7 +242,7 @@
   'pform.memoPh': 'e.g. Allergy: egg',
   'server.info': '💻 From other computers or tablets on the same network, open this address:',
   'server.noNet': '(no network found)',
-  'note.trLabel': '🤖 Automatic translation (for reference)',
+  'note.trLabel': '🤖 Automatic translation (for reference). Japanese often omits the subject, so "I" may mean the resident',
   'note.orig': 'Original: ',
   'note.trPending': '⏳ Translation in progress…',
   'note.trFailed': 'Could not be translated',

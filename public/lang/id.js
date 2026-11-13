@@ -243,7 +243,7 @@
   'pform.memoPh': 'Contoh: alergi telur',
   'server.info': '💻 Dari komputer atau tablet lain, sambungkan ke jaringan yang sama lalu buka alamat berikut:',
   'server.noNet': '(jaringan tidak ditemukan)',
-  'note.trLabel': '🤖 Terjemahan otomatis (hanya acuan)',
+  'note.trLabel': '🤖 Terjemahan otomatis (hanya acuan). Bahasa Jepang sering menghilangkan subjek, jadi "aku/saya" bisa berarti penghuni',
   'note.orig': 'Asli: ',
   'note.trPending': '⏳ Terjemahan sedang dibuat…',
   'note.trFailed': 'Tidak bisa diterjemahkan',

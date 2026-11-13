@@ -4,3 +4,4 @@ node_modules/
 translator/model/
 translator/venv/
 translator/wheels/
+__pycache__/
