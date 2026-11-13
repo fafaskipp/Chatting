@@ -1,0 +1,10 @@
+[
+  { "id": "momo",  "name": "モモの木", "color": "#f28aa6", "shape": "peach" },
+  { "id": "ume",   "name": "うめの木", "color": "#9ccc3c", "shape": "round" },
+  { "id": "kaki",  "name": "かきの木", "color": "#f08a24", "shape": "persimmon" },
+  { "id": "biwa",  "name": "びわの木", "color": "#f5b335", "shape": "oval" },
+  { "id": "nashi", "name": "なしの木", "color": "#c9c25a", "shape": "pear" },
+  { "id": "yuzu",  "name": "ゆずの木", "color": "#f2cf1d", "shape": "round" },
+  { "id": "mikan", "name": "みかん",   "color": "#fb8c00", "shape": "flat" },
+  { "id": "ringo", "name": "りんご",   "color": "#e53935", "shape": "apple" }
+]

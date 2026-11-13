@@ -1,0 +1,343 @@
+{
+ "_説明": "日本語の言葉 → 英語・インドネシア語の決まった訳。ここに足すと、自動翻訳でいつもこの訳になります。長い言葉が先に使われます。",
+ "褥瘡予防": {
+  "en": "pressure sore prevention",
+  "id": "pencegahan luka tekan"
+ },
+ "褥瘡": {
+  "en": "pressure sore",
+  "id": "luka tekan (dekubitus)"
+ },
+ "床ずれ": {
+  "en": "pressure sore",
+  "id": "luka tekan (dekubitus)"
+ },
+ "尿失禁": {
+  "en": "urinary incontinence",
+  "id": "inkontinensia urin"
+ },
+ "便失禁": {
+  "en": "fecal incontinence",
+  "id": "inkontinensia alvi"
+ },
+ "失禁": {
+  "en": "incontinence",
+  "id": "inkontinensia"
+ },
+ "徘徊": {
+  "en": "wandering",
+  "id": "berkeliaran (wandering)"
+ },
+ "喀痰": {
+  "en": "sputum",
+  "id": "dahak"
+ },
+ "痰": {
+  "en": "sputum",
+  "id": "dahak"
+ },
+ "排便": {
+  "en": "bowel movement",
+  "id": "buang air besar (BAB)"
+ },
+ "排尿": {
+  "en": "urination",
+  "id": "buang air kecil (BAK)"
+ },
+ "便秘": {
+  "en": "constipation",
+  "id": "sembelit"
+ },
+ "下痢": {
+  "en": "diarrhea",
+  "id": "diare"
+ },
+ "嘔吐": {
+  "en": "vomiting",
+  "id": "muntah"
+ },
+ "誤嚥性肺炎": {
+  "en": "aspiration pneumonia",
+  "id": "pneumonia aspirasi"
+ },
+ "誤嚥": {
+  "en": "aspiration (food entering the airway)",
+  "id": "aspirasi (makanan masuk ke saluran napas)"
+ },
+ "誤薬": {
+  "en": "medication error",
+  "id": "kesalahan pemberian obat"
+ },
+ "ヒヤリハット": {
+  "en": "near miss",
+  "id": "nyaris celaka (near miss)"
+ },
+ "転倒": {
+  "en": "fall",
+  "id": "jatuh (terjatuh)"
+ },
+ "転落": {
+  "en": "fall from a height (e.g. from the bed)",
+  "id": "jatuh dari ketinggian (mis. dari tempat tidur)"
+ },
+ "傾眠": {
+  "en": "drowsiness",
+  "id": "mengantuk berat (somnolen)"
+ },
+ "不穏": {
+  "en": "agitation",
+  "id": "gelisah"
+ },
+ "せん妄": {
+  "en": "delirium",
+  "id": "delirium"
+ },
+ "認知症": {
+  "en": "dementia",
+  "id": "demensia"
+ },
+ "浮腫": {
+  "en": "edema (swelling)",
+  "id": "edema (bengkak)"
+ },
+ "むくみ": {
+  "en": "swelling",
+  "id": "bengkak"
+ },
+ "発熱": {
+  "en": "fever",
+  "id": "demam"
+ },
+ "バイタルサイン": {
+  "en": "vital signs",
+  "id": "tanda vital"
+ },
+ "バイタル": {
+  "en": "vital signs",
+  "id": "tanda vital"
+ },
+ "血圧": {
+  "en": "blood pressure",
+  "id": "tekanan darah"
+ },
+ "脈拍": {
+  "en": "pulse",
+  "id": "denyut nadi"
+ },
+ "体温": {
+  "en": "body temperature",
+  "id": "suhu tubuh"
+ },
+ "酸素飽和度": {
+  "en": "oxygen saturation",
+  "id": "saturasi oksigen"
+ },
+ "血糖": {
+  "en": "blood sugar",
+  "id": "gula darah"
+ },
+ "インスリン": {
+  "en": "insulin",
+  "id": "insulin"
+ },
+ "清拭": {
+  "en": "bed bath (wiping the body)",
+  "id": "seka badan"
+ },
+ "更衣": {
+  "en": "changing clothes",
+  "id": "ganti pakaian"
+ },
+ "体位変換": {
+  "en": "repositioning",
+  "id": "alih baring (mengubah posisi)"
+ },
+ "移乗": {
+  "en": "transfer (e.g. bed to wheelchair)",
+  "id": "berpindah (transfer, mis. dari tempat tidur ke kursi roda)"
+ },
+ "離床": {
+  "en": "getting out of bed",
+  "id": "turun dari tempat tidur"
+ },
+ "臥床": {
+  "en": "bed rest",
+  "id": "berbaring di tempat tidur"
+ },
+ "見守り": {
+  "en": "supervision",
+  "id": "pengawasan"
+ },
+ "申し送り": {
+  "en": "handover",
+  "id": "serah terima (laporan pergantian shift)"
+ },
+ "服薬": {
+  "en": "taking medication",
+  "id": "minum obat"
+ },
+ "内服": {
+  "en": "oral medication",
+  "id": "obat minum"
+ },
+ "受診": {
+  "en": "doctor visit",
+  "id": "pemeriksaan ke dokter"
+ },
+ "往診": {
+  "en": "doctor's home visit",
+  "id": "kunjungan dokter"
+ },
+ "居室": {
+  "en": "own room",
+  "id": "kamar sendiri"
+ },
+ "食堂": {
+  "en": "dining room",
+  "id": "ruang makan"
+ },
+ "介助": {
+  "en": "assistance",
+  "id": "bantuan"
+ },
+ "拒否": {
+  "en": "refusal",
+  "id": "penolakan"
+ },
+ "経管栄養": {
+  "en": "tube feeding",
+  "id": "pemberian makan lewat selang"
+ },
+ "胃ろう": {
+  "en": "gastrostomy (PEG)",
+  "id": "gastrostomi (PEG)"
+ },
+ "吸引": {
+  "en": "suction",
+  "id": "penyedotan (suction)"
+ },
+ "点滴": {
+  "en": "IV drip",
+  "id": "infus"
+ },
+ "オムツ": {
+  "en": "diaper",
+  "id": "popok"
+ },
+ "おむつ": {
+  "en": "diaper",
+  "id": "popok"
+ },
+ "歩行器": {
+  "en": "walker",
+  "id": "alat bantu jalan (walker)"
+ },
+ "ケアマネジャー": {
+  "en": "care manager",
+  "id": "manajer perawatan (care manager)"
+ },
+ "デイサービス": {
+  "en": "day service",
+  "id": "layanan harian (day service)"
+ },
+ "ショートステイ": {
+  "en": "short stay",
+  "id": "menginap jangka pendek (short stay)"
+ },
+ "面会": {
+  "en": "visit",
+  "id": "kunjungan"
+ },
+ "入院": {
+  "en": "hospitalization",
+  "id": "rawat inap"
+ },
+ "退院": {
+  "en": "discharge from hospital",
+  "id": "pulang dari rumah sakit"
+ },
+ "骨折": {
+  "en": "fracture",
+  "id": "patah tulang"
+ },
+ "打撲": {
+  "en": "bruise (contusion)",
+  "id": "memar"
+ },
+ "擦過傷": {
+  "en": "abrasion",
+  "id": "lecet"
+ },
+ "皮下出血": {
+  "en": "subcutaneous bleeding (bruise)",
+  "id": "perdarahan bawah kulit (memar)"
+ },
+ "発赤": {
+  "en": "redness",
+  "id": "kemerahan"
+ },
+ "食欲不振": {
+  "en": "loss of appetite",
+  "id": "nafsu makan menurun"
+ },
+ "嚥下": {
+  "en": "swallowing",
+  "id": "menelan"
+ },
+ "とろみ": {
+  "en": "thickener",
+  "id": "pengental makanan"
+ },
+ "ミキサー食": {
+  "en": "pureed meal",
+  "id": "makanan blender (puree)"
+ },
+ "刻み食": {
+  "en": "chopped meal",
+  "id": "makanan cincang"
+ },
+ "内科": {
+  "en": "internal medicine",
+  "id": "penyakit dalam"
+ },
+ "外科": {
+  "en": "surgery",
+  "id": "bedah"
+ },
+ "整形外科": {
+  "en": "orthopedics",
+  "id": "ortopedi"
+ },
+ "眼科": {
+  "en": "ophthalmology (eye clinic)",
+  "id": "dokter mata"
+ },
+ "皮膚科": {
+  "en": "dermatology",
+  "id": "dokter kulit"
+ },
+ "歯科": {
+  "en": "dentistry",
+  "id": "dokter gigi"
+ },
+ "精神科": {
+  "en": "psychiatry",
+  "id": "psikiatri"
+ },
+ "耳鼻科": {
+  "en": "ENT (ear, nose, throat)",
+  "id": "THT"
+ },
+ "泌尿器科": {
+  "en": "urology",
+  "id": "urologi"
+ },
+ "循環器科": {
+  "en": "cardiology",
+  "id": "kardiologi"
+ },
+ "脳神経外科": {
+  "en": "neurosurgery",
+  "id": "bedah saraf"
+ }
+}
