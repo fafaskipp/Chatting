@@ -25,6 +25,8 @@
   'btn.nextMonth': 'Next month ▶',
   'btn.more': '⬇ Show more ({n} left)',
   'btn.collapse': '▲ Collapse',
+  'btn.furigana': 'Furigana (reading aid) on/off',
+  'furigana.failed': 'Furigana could not be loaded',
   'btn.lang': 'Language',
 
   'toast.saved': 'Saved ✅',

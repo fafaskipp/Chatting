@@ -435,3 +435,24 @@ dialog h2 { margin: 0; }
 .tr-orig-line { font-size: .82rem; color: #607d8b; margin: 2px 0 4px; }
 .tr-hint { font-size: .8rem; color: #78909c; margin-top: 4px; }
 .tr-status { font-size: .85rem; color: #546e7a; font-weight: 700; }
+
+/* ふりがな：切のときは読みを隠す。入のときは行間を広げて、読みが前の行に重ならないようにする */
+ruby { ruby-align: center; }
+rt { display: none; font-size: .52em; font-weight: 600; letter-spacing: 0; line-height: 1.1; }
+.furigana-on rt { display: revert; }
+.furigana-on body { line-height: 1.9; }
+.furigana-on .note-text, .furigana-on .text, .furigana-on .patient-memo, .furigana-on .sub, .furigana-on .ev-body { line-height: 2.25; }
+.furigana-on .btn, .furigana-on .tab .lb, .furigana-on .chip-btn { line-height: 1.7; }
+.btn-furi { font-size: 1.05rem; padding-left: 12px; padding-right: 12px; }
+.btn-furi.active { background: #f2b705; color: #000; }
+.btn-furi.loading { opacity: .6; }
+.btn-furi rt { display: none !important; }
+@media (max-width: 380px) { .btn-furi { padding-left: 8px; padding-right: 8px; } }
+
+/* 幅480px以下：ユニット名が縦に割れないよう、名前の段と、ボタンの段に分ける */
+@media (max-width: 480px) {
+  .topbar { flex-wrap: wrap; }
+  .topbar h1 { flex: 1 1 100%; }
+  .topbar-actions { flex: 1 1 100%; justify-content: flex-end; }
+  .topbar-actions .btn-new { flex: 1; }
+}

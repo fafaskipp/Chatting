@@ -26,6 +26,8 @@
   'btn.nextMonth': 'Bulan depan ▶',
   'btn.more': '⬇ Lihat lagi (sisa {n})',
   'btn.collapse': '▲ Tutup',
+  'btn.furigana': 'Furigana (cara baca) hidup/mati',
+  'furigana.failed': 'Furigana tidak dapat dimuat',
   'btn.lang': 'Bahasa',
 
   'toast.saved': 'Tersimpan ✅',

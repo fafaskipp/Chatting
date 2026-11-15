@@ -28,6 +28,8 @@
   'btn.nextMonth': '次の月 ▶',
   'btn.more': '⬇ もっと見る（あと {n} 件）',
   'btn.collapse': '▲ 閉じる',
+  'btn.furigana': 'ふりがな 入／切',
+  'furigana.failed': 'ふりがなを読みこめませんでした',
   'btn.lang': '言語',
 
   // 知らせ

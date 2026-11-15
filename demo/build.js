@@ -34,6 +34,7 @@ main { padding-left: max(16px, env(safe-area-inset-left, 0px)) !important; paddi
 .demo-banner { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; background: #ede7f6; border-left: 8px solid #6a1b9a; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; }
 .demo-banner > div { flex: 1 1 260px; min-width: 0; }
 .demo-banner .btn { min-height: 44px; font-size: 1rem; }
+#btn-furi { display: none; } /* ふりがなの辞書（18MB）はデモに入れない */
 `;
 
 const demoJs = `

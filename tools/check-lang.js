@@ -43,7 +43,7 @@ for (const code of LANGS.slice(1)) {
 }
 
 console.log('2) プログラムが使っている名前');
-const files = ['public/app.js', 'public/index.html', 'public/i18n.js', 'demo/mock.js', 'demo/build.js'].map((f) => [f, path.join(root, f)]);
+const files = ['public/app.js', 'public/index.html', 'public/i18n.js', 'public/furigana.js', 'demo/mock.js', 'demo/build.js'].map((f) => [f, path.join(root, f)]);
 const used = new Set();
 for (const [name, file] of files) {
   if (!fs.existsSync(file)) continue;
