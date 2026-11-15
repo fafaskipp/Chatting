@@ -318,22 +318,28 @@ function unitList() {
   });
 }
 
-// 看護師・ケアマネジャーのホームに出す「今日の大事なこと」：全ユニットの、今日の重要な記録とヒヤリ・事故
+// 看護師・ケアマネジャーのホームに出す「この1週間の大事なこと」：全ユニットの、直近7日の重要な記録とヒヤリ・事故
+// 朝はまだ記録が少なく、休みの次の日でも1週間分を1ページで読めるように、今日・昨日…の順に返す
+const OVERVIEW_DAYS = 7;
 function overview(me) {
   if (me.role === 'unit') throw Object.assign(new Error('この操作はできません'), { status: 403, code: 'staffOnly' });
-  const today = localDate();
+  const days = [];
+  for (let i = 0; i < OVERVIEW_DAYS; i++) days.push(localDate(new Date(Date.now() - i * 86400000)));
+  const from = days[days.length - 1];
   const out = [];
   for (const u of units.values()) {
     const name = u.store.db.settings.unitName || u.cfg.name;
     for (const n of u.store.db.notes) {
-      if (n.deletedAt || n.date !== today) continue;
+      if (n.deletedAt || n.date < from || n.date > days[0]) continue;
       const incident = u.store.isIncident(n);
       if (!n.important && !incident) continue;
       const p = n.patientId && u.store.db.patients.find((x) => x.id === n.patientId);
-      out.push({ unit: u.id, unitName: name, color: u.cfg.color, id: n.id, time: n.time, category: n.category, important: n.important, incident, patient: p ? p.name : '', text: n.text, tr: n.tr });
+      out.push({ unit: u.id, unitName: name, color: u.cfg.color, id: n.id, date: n.date, time: n.time, category: n.category, important: n.important, incident, patient: p ? p.name : '', author: n.author, text: n.text, tr: n.tr });
     }
   }
-  return out.sort((a, b) => (b.time || '').localeCompare(a.time || ''));
+  // 新しい日が上。同じ日の中は、新しい時刻が上
+  out.sort((a, b) => (b.date + (b.time || '00:00')).localeCompare(a.date + (a.time || '00:00')));
+  return { days, items: out };
 }
 
 const server = http.createServer(async (req, res) => {

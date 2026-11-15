@@ -98,3 +98,17 @@ button.unit { font: inherit; cursor: pointer; width: 100%; }
 .acct input { margin-top: 0; min-height: 48px; font-size: 1rem; }
 @media (max-width: 600px) { .acct { grid-template-columns: 1fr 1fr; } .acct .id { grid-column: 1 / -1; } .acct .btn { grid-column: 1 / -1; } }
 .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 12px 22px; border-radius: 999px; font-weight: 800; z-index: 10; }
+
+/* この1週間の大事なこと（看護師・ケアマネジャー） */
+.week .day { margin-top: 14px; }
+.week .day-h { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; gap: 8px; margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--bg-dot); font-size: 1.1rem; }
+.week .day:first-of-type .day-h { background: var(--accent); color: #fff; }
+.week .day-n { font-size: .95rem; font-weight: 800; }
+.week .day-none { margin: 6px 4px 0; color: var(--muted); }
+.week .today-item.inc .meta { color: #b71c1c; }
+.week .today-item .txt small { display: block; color: var(--muted); font-size: .85rem; margin-top: 2px; }
+.ufilters { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 2px; }
+.ufilter { min-height: 40px; padding: 4px 12px; border-radius: 999px; border: 3px solid var(--c, var(--line)); background: var(--card); color: var(--ink); font-weight: 800; cursor: pointer; }
+.ufilter.on { background: var(--c, var(--accent)); color: #fff; border-color: var(--c, var(--accent)); }
+.ufilter:not([style]) { --c: var(--accent); }
+@media (prefers-color-scheme: dark) { .week .today-item.inc .meta { color: #ff8a80; } }

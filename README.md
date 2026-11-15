@@ -27,7 +27,7 @@ Hak akses (diperiksa di **server**, bukan hanya disembunyikan di layar):
 - **Ganti password sendiri:** akun unit di tab ⚙️ 管理 (kartu 🔑); nurse & care manager lewat tombol 🔑 アカウントの設定 di home.
 - **Care manager** di halaman itu juga bisa mengganti nama dan mereset password ke-10 akun. Mereset password mengeluarkan akun itu dari semua perangkat.
 - **Pop-up 🔔 ほかの人からの新しい記録:** saat membuka unitnya sendiri, staf unit melihat catatan baru yang ditulis nurse, care manager, atau unit lain di unit itu. 「✅ 確認しました」 menghilangkan pop-up untuk semua perangkat unit itu; 「あとで」 menundanya.
-- Home nurse/care manager menampilkan **🔔 今日の大事なこと**: catatan penting dan ヒヤリ・事故 hari ini dari semua unit.
+- Home nurse/care manager menampilkan **🔔 この1週間の大事なこと**: catatan ⭐ penting dan ⚠️ ヒヤリ・事故 dari semua unit selama **7 hari terakhir**, dikelompokkan per hari (hari ini paling atas, lalu kemarin, dst.), terbaru di atas dalam tiap hari, lengkap dengan nama penghuni dan penulis. Bisa disaring per unit. Hari tanpa catatan tetap ditampilkan agar terlihat urutannya.
 - Masa login: akun unit 30 hari per perangkat; nurse/care manager 12 jam. 5 kali salah password → tunggu 1 menit.
 - **Lupa password** (termasuk care manager): di komputer server `node tools/reset-password.js` (daftar akun), `node tools/reset-password.js care` (kembali ke password awal), atau `node tools/reset-password.js care passwordbaru`.
 - Akun disimpan di `data/accounts.json` (password dalam bentuk hash scrypt), sesi di `data/sessions.json`.
