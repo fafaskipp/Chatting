@@ -99,6 +99,7 @@ function createUnit(cfg) {
     slotCount: SLOT_COUNT,
     trashDays: TRASH_DAYS,
     newId,
+    unitId: cfg.id,
     unitExists: (id) => id !== cfg.id && units.has(id),
     mediaExists: (file) => fs.existsSync(path.join(uploadDir, path.basename(file))),
     removeMedia: (file) => fs.unlink(path.join(uploadDir, path.basename(file)), () => {}),
@@ -294,6 +295,8 @@ async function handleApi(req, res, url, unit, apiPath) {
   }
 
   const body = method === 'POST' || method === 'PUT' ? await readJson(req) : {};
+  // ほかのユニットが書きたす記録：書いた人は自動でそのユニットの名前（例：かきの木）
+  if (perms.addOnly && parts[1] === 'notes') body.author = me.name;
   return sendJson(res, 200, store.handle(method, apiPath, url.searchParams, body, { by: me.id }));
 }
 

@@ -304,7 +304,6 @@
   'err.passwordLong': 'パスワードが長すぎます',
   'err.passwordWrong': '今のパスワードがちがいます',
   'auth.logout': 'ログアウト',
-  'auth.viewOnly': '👀 {unit} を見ています（見るだけ・書けません）',
   'auth.backToOwn': '自分のユニットへもどる ▶',
   'auth.staffNote': '記録と予定を書けます。直せるのは自分が書いたものだけです。消すことはできません。',
   'auth.mustChange': '⚠️ はじめのパスワードのままです。',
@@ -331,4 +330,9 @@
   'home.todayTitle': '🔔 今日の大事なこと（全ユニット）',
   'home.todayNone': '今日は、重要な記録やヒヤリ・事故はまだありません。',
   'home.who': 'ログイン中：{name}',
+  'auth.addOnly': '👀 {unit} を見ています。ここでは記録を書きたすことだけできます（書いた人は「{me}」になります）',
+  'inbox.title': '🔔 ほかの人からの新しい記録（{n}件）',
+  'inbox.lead': '看護師・ケアマネジャー・ほかのユニットが、このユニットに書いた記録です。',
+  'inbox.ack': '✅ 確認しました',
+  'inbox.later': 'あとで',
 };

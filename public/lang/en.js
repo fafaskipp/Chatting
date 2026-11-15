@@ -289,7 +289,6 @@
   'err.passwordLong': 'The password is too long',
   'err.passwordWrong': 'The current password is wrong',
   'auth.logout': 'Log out',
-  'auth.viewOnly': '👀 Viewing {unit} (view only, you cannot write)',
   'auth.backToOwn': 'Back to my unit ▶',
   'auth.staffNote': 'You can write notes and events. You can edit only what you wrote. You cannot delete.',
   'auth.mustChange': '⚠️ You are still using the starting password.',
@@ -316,4 +315,9 @@
   'home.todayTitle': '🔔 Important today (all units)',
   'home.todayNone': 'No important notes or incidents yet today.',
   'home.who': 'Logged in as: {name}',
+  'auth.addOnly': '👀 Viewing {unit}. Here you can only add notes (the writer is set to "{me}")',
+  'inbox.title': '🔔 New notes from others ({n})',
+  'inbox.lead': 'Notes written in this unit by the nurse, the care manager or another unit.',
+  'inbox.ack': '✅ Checked',
+  'inbox.later': 'Later',
 };

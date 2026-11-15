@@ -290,7 +290,6 @@
   'err.passwordLong': 'Kata sandi terlalu panjang',
   'err.passwordWrong': 'Kata sandi sekarang salah',
   'auth.logout': 'Keluar',
-  'auth.viewOnly': '👀 Melihat {unit} (hanya lihat, tidak bisa menulis)',
   'auth.backToOwn': 'Kembali ke unit sendiri ▶',
   'auth.staffNote': 'Anda bisa menulis catatan dan agenda. Yang bisa diubah hanya tulisan Anda sendiri. Tidak bisa menghapus.',
   'auth.mustChange': '⚠️ Kata sandi masih bawaan.',
@@ -317,4 +316,9 @@
   'home.todayTitle': '🔔 Hal penting hari ini (semua unit)',
   'home.todayNone': 'Hari ini belum ada catatan penting atau insiden.',
   'home.who': 'Masuk sebagai: {name}',
+  'auth.addOnly': '👀 Melihat {unit}. Di sini Anda hanya bisa menambah catatan (penulis otomatis: "{me}")',
+  'inbox.title': '🔔 Catatan baru dari pihak lain ({n})',
+  'inbox.lead': 'Catatan yang ditulis perawat, care manager, atau unit lain di unit ini.',
+  'inbox.ack': '✅ Sudah dicek',
+  'inbox.later': 'Nanti',
 };

@@ -469,6 +469,11 @@ rt { display: none; font-size: .52em; font-weight: 600; letter-spacing: 0; line-
 .tag-staff { background: #00695c; color: #fff; }
 .form-error { color: var(--red); font-weight: 800; margin: 0; }
 /* 書けないとき：書くためのボタンを出さない（サーバーでも止めている） */
-.cant-write #btn-new, .cant-write [data-eadd] { display: none !important; }
+.cant-add #btn-new, .cant-write [data-eadd] { display: none !important; }
 .tab[hidden] { display: none !important; }
 input[type=password] { width: 100%; min-height: 50px; padding: 8px 12px; border: 2px solid var(--line); border-radius: 10px; font: inherit; }
+.tag-unit { background: #4a148c; color: #fff; }
+input[readonly] { background: #eceff1; color: #455a64; }
+.inbox-dialog { width: min(640px, calc(100vw - 16px)); }
+.inbox-list { max-height: 55vh; overflow-y: auto; margin: 12px 0; padding-right: 4px; }
+.inbox-list .note { margin-bottom: 10px; }

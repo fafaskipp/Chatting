@@ -19,13 +19,14 @@ Hak akses (diperiksa di **server**, bukan hanya disembunyikan di layar):
 
 | | Unit sendiri | Unit lain |
 |---|---|---|
-| Akun unit | semua: tulis, edit, hapus, pasien, agenda, pengaturan, tempat sampah | **hanya melihat** tab 📅 日付・👤 利用者・🗓 予定 (termasuk unit sebelah) |
+| Akun unit | semua: tulis, edit, hapus, pasien, agenda, pengaturan, tempat sampah | melihat tab 📅 日付・👤 利用者・🗓 予定 dan **hanya menambah catatan** (untuk shift malam). Nama penulis otomatis nama unitnya (mis. かきの木); tidak bisa mengedit/menghapus |
 | Nurse / Care manager | — | melihat semua unit (termasuk 評価・まとめ), **menulis** catatan & agenda, **mengedit hanya tulisannya sendiri**, **tidak bisa menghapus apa pun** |
 
 - Menghapus (catatan, agenda, pasien, tempat sampah), data pasien, dan pengaturan unit hanya milik **akun unit itu** — unit adalah pihak terkuat atas catatannya. Catatan yang ditulis nurse/care manager diberi tanda 🩺/📋 dan bisa dihapus oleh unit.
 - Akun unit membuka unit lain lewat tombol 🏠 (semua unit) atau tombol unit sebelah di paling bawah 📅 日付. Saat melihat unit lain muncul pita biru "見るだけ" dan tombol tulis/edit/hapus hilang.
 - **Ganti password sendiri:** akun unit di tab ⚙️ 管理 (kartu 🔑); nurse & care manager lewat tombol 🔑 アカウントの設定 di home.
 - **Care manager** di halaman itu juga bisa mengganti nama dan mereset password ke-10 akun. Mereset password mengeluarkan akun itu dari semua perangkat.
+- **Pop-up 🔔 ほかの人からの新しい記録:** saat membuka unitnya sendiri, staf unit melihat catatan baru yang ditulis nurse, care manager, atau unit lain di unit itu. 「✅ 確認しました」 menghilangkan pop-up untuk semua perangkat unit itu; 「あとで」 menundanya.
 - Home nurse/care manager menampilkan **🔔 今日の大事なこと**: catatan penting dan ヒヤリ・事故 hari ini dari semua unit.
 - Masa login: akun unit 30 hari per perangkat; nurse/care manager 12 jam. 5 kali salah password → tunggu 1 menit.
 - **Lupa password** (termasuk care manager): di komputer server `node tools/reset-password.js` (daftar akun), `node tools/reset-password.js care` (kembali ke password awal), atau `node tools/reset-password.js care passwordbaru`.

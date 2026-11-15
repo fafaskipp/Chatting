@@ -290,6 +290,19 @@
     </div>
   </dialog>
 
+  <!-- ほかの人からの新しい記録 -->
+  <dialog id="inbox-dialog" class="inbox-dialog">
+    <div class="form">
+      <h2 id="inbox-title"></h2>
+      <p class="sub-hint" style="margin:0" data-i18n="inbox.lead">看護師・ケアマネジャー・ほかのユニットが、このユニットに書いた記録です。</p>
+      <div id="inbox-list" class="inbox-list"></div>
+      <div class="actions">
+        <button type="button" class="btn btn-save" id="inbox-ack" data-i18n="inbox.ack">✅ 確認しました</button>
+        <button type="button" class="btn btn-gray" id="inbox-later" data-i18n="inbox.later">あとで</button>
+      </div>
+    </div>
+  </dialog>
+
   <div id="toast" class="toast" hidden></div>
 
   <script src="lang/ja.js"></script>

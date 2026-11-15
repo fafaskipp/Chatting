@@ -101,15 +101,18 @@ function allowedViews() {
   if (state.perms.staff) return ['date', 'patient', 'cal', 'report', 'summary'];
   return ['date', 'patient', 'cal'];
 }
-// 看護師・ケアマネジャーが書いた記録につける印
+// このユニット以外（看護師・ケアマネジャー・ほかのユニット）が書いた記録につける印
 function staffTag(x) {
   const a = x.createdBy && state.accounts[x.createdBy];
-  return a && a.role !== 'unit' ? `<span class="tag tag-staff">${a.role === 'nurse' ? '🩺' : '📋'} ${esc(a.name)}</span>` : '';
+  if (!a || (a.role === 'unit' && BASE === '/u/' + a.unit)) return '';
+  const icon = a.role === 'nurse' ? '🩺' : a.role === 'care' ? '📋' : '🌙';
+  return `<span class="tag ${a.role === 'unit' ? 'tag-unit' : 'tag-staff'}">${icon} ${esc(a.name)}</span>`;
 }
 
 function applyPerms() {
   const p = state.perms;
   document.body.classList.toggle('cant-write', !p.canWrite);
+  document.body.classList.toggle('cant-add', !p.canAddNote);
   document.body.classList.toggle('view-only', p.viewOnly);
   const views = allowedViews();
   $$('.tab').forEach((tab) => (tab.hidden = !views.includes(tab.dataset.view)));
@@ -129,7 +132,7 @@ function renderWhoami() {
       <span class="whoami-name">👤 ${esc(me.name)}</span>
       <button type="button" class="btn btn-gray whoami-logout" id="btn-logout">${th('auth.logout')}</button>
     </div>
-    ${p.viewOnly ? `<div class="whoami-banner view">${th('auth.viewOnly', { unit: unitName })}　<a href="/u/${encodeURIComponent(me.unit)}/">${th('auth.backToOwn')}</a></div>` : ''}
+    ${p.viewOnly ? `<div class="whoami-banner view">${th('auth.addOnly', { unit: unitName, me: me.name })}　<a href="/u/${encodeURIComponent(me.unit)}/">${th('auth.backToOwn')}</a></div>` : ''}
     ${p.staff ? `<div class="whoami-banner staff">${th('auth.staffNote')}</div>` : ''}
     ${me.mustChange ? `<div class="whoami-banner warn">${th('auth.mustChange')} <a href="${changeHref}" id="must-change">${th('auth.changeLink')}</a></div>` : ''}`;
 }
@@ -314,7 +317,7 @@ function noteHtml(n, showPatient, mode = 'normal', nameOverride) {
     <article class="note ${n.important ? 'important' : ''}">
       <div class="note-head">
         ${n.important ? `<span class="tag" style="background:#f9a825;color:#000">${th('note.important')}</span>` : ''}
-        ${mode === 'trash' ? `<span class="note-time">${esc(fmtDate(n.date, false))}</span>` : ''}
+        ${mode === 'trash' || mode === 'inbox' ? `<span class="note-time">${esc(fmtDate(n.date, false))}</span>` : ''}
         <span class="note-time">${n.time ? '🕒 ' + esc(n.time) : ''}</span>
         ${showPatient ? patient : ''}
         <span class="tag" style="background:${catColor(n.category)}">${esc(catLabel(n.category))}</span>
@@ -876,10 +879,12 @@ function openNoteForm(note) {
     f.id.value = '';
     f.date.value = ymd(now);
     f.time.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    f.author.value = remember('author');
+    f.author.value = state.perms.addOnly ? state.me.name : remember('author');
     const pid = state.view === 'patient' && state.selectedPatient !== 'none' ? state.selectedPatient : null;
     state.form = { patientId: pid, media: [] };
   }
+  // ほかのユニットに書きたすとき、書いた人は自動（変えられない）
+  f.author.readOnly = Boolean(state.perms.addOnly);
   state.formToken++;
   renderFormChoices();
   $('#note-dialog').showModal();
@@ -962,7 +967,7 @@ async function saveNote(e) {
     important: f.important.checked,
     media: state.form.media,
   };
-  remember('author', body.author);
+  if (!state.perms.addOnly) remember('author', body.author);
   try {
     if (f.id.value) await api('notes/' + f.id.value, { method: 'PUT', body });
     else await api('notes', { method: 'POST', body });
@@ -1024,9 +1029,40 @@ async function poll() {
   if (document.hidden || document.querySelector('dialog[open]')) return;
   try {
     const v = await api('version');
-    if (v.version !== state.version) refresh();
+    if (v.version !== state.version) {
+      await refresh();
+      checkInbox();
+    }
   } catch {}
 }
+
+// ---------- ほかの人からの新しい記録（ポップアップ） ----------
+// 自分のユニットを開いているときだけ。看護師・ケアマネジャー・ほかのユニットが書いた、まだ確認していない記録を知らせる
+let inboxShown = ''; // 「あとで」を押したとき、同じものでは もう出さない
+async function checkInbox() {
+  if (!state.perms.owner || document.querySelector('dialog[open]')) return;
+  let list;
+  try {
+    list = await api('inbox');
+  } catch {
+    return;
+  }
+  if (!list.length) return;
+  const latest = list.reduce((m, n) => (n.createdAt > m ? n.createdAt : m), '');
+  if (latest === inboxShown) return;
+  inboxShown = latest;
+  $('#inbox-dialog').dataset.upto = latest;
+  $('#inbox-title').textContent = t('inbox.title', { n: list.length });
+  $('#inbox-list').innerHTML = list.map((n) => noteHtml(n, true, 'inbox')).join('');
+  $('#inbox-dialog').showModal();
+}
+$('#inbox-ack').addEventListener('click', async () => {
+  try {
+    await api('inbox/ack', { method: 'POST', body: { upto: $('#inbox-dialog').dataset.upto } });
+  } catch {}
+  $('#inbox-dialog').close();
+});
+$('#inbox-later').addEventListener('click', () => $('#inbox-dialog').close());
 
 // ---------- イベント ----------
 
@@ -1362,6 +1398,6 @@ Promise.all([
   if (location.hash === '#account' && state.perms.owner) {
     history.replaceState(null, '', location.pathname);
     refresh().then(openAccountCard);
-  } else refresh();
+  } else refresh().then(checkInbox);
 });
 setInterval(poll, 10000);
