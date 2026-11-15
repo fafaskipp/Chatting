@@ -44,7 +44,7 @@ Aplikasi web catatan harian untuk pekerjaan kaigo. Berjalan **offline** di satu 
 
 Ringkasnya:
 1. Instal **Node.js** (versi 18 ke atas) dari https://nodejs.org/ di komputer server. Setelah itu tidak perlu internet, dan tidak perlu `npm install`.
-2. Windows: klik dua kali **`start.bat`**. Mac/Linux: jalankan `./start.sh`.
+2. Windows: klik dua kali **`start.bat`**. Mac/Linux: jalankan `./start.sh`. Penerjemah di Linux/Mac: `./translator/setup-translator.sh` (sekali saja).
 3. Di jendela hitam akan muncul alamat, misalnya `http://192.168.1.10:3000`. Buka alamat itu di browser komputer/HP lain yang tersambung ke Wi-Fi yang sama. Alamat ini juga terlihat di bawah tab ⚙️ 管理.
 4. Jangan tutup jendela server selama aplikasi dipakai.
 5. Agar server otomatis jalan setelah komputer restart (komputer 24 jam): tekan `Win + R`, ketik `shell:startup`, lalu taruh shortcut `start.bat` di folder yang terbuka.
