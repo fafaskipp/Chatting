@@ -46,19 +46,44 @@
         return render();
       }
       if (e.target.closest('.qr-copy')) {
-        const url = state.urls[state.i];
-        try {
-          await navigator.clipboard.writeText(url);
-        } catch {
-          const r = document.createRange();
-          r.selectNodeContents(dlg.querySelector('.qr-url'));
-          getSelection().removeAllRanges();
-          getSelection().addRange(r);
-        }
-        e.target.closest('.qr-copy').textContent = T('qr.copied');
+        const btn = e.target.closest('.qr-copy');
+        const done = await copyText(state.urls[state.i]);
+        btn.textContent = done ? T('qr.copied') : T('qr.copyManual');
       }
     });
     return dlg;
+  }
+
+  // アドレスをコピーする。http://192.168.x.x のように https でないアドレスで開いていると、
+  // ブラウザは navigator.clipboard を使わせないので、そのときは昔からある方法（execCommand）でコピーする
+  async function copyText(text) {
+    if (window.isSecureContext && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {}
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    Object.assign(ta.style, { position: 'fixed', top: '0', left: '0', width: '1px', height: '1px', opacity: '0' });
+    dlg.appendChild(ta); // ダイアログの中に置く（外だと、開いているダイアログのせいで選べない）
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, text.length); // iPhone・iPad 用
+    let ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch {}
+    ta.remove();
+    if (!ok) {
+      // それでもだめなとき：アドレスを選んだ状態にして、自分でコピーしてもらう
+      const r = document.createRange();
+      r.selectNodeContents(dlg.querySelector('.qr-url'));
+      getSelection().removeAllRanges();
+      getSelection().addRange(r);
+    }
+    return ok;
   }
 
   function svgFor(text) {

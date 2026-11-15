@@ -329,6 +329,7 @@
   'qr.noNet': 'No network found. It can only be opened on this computer.',
   'qr.copy': 'Copy address',
   'qr.copied': '✅ Copied',
+  'qr.copyManual': 'The address is selected. Long-press (or Ctrl+C) to copy',
   'qr.close': 'Close',
   'qr.open': 'Press to show a QR code for opening on another device',
 };

@@ -330,6 +330,7 @@
   'qr.noNet': 'Jaringan tidak ditemukan. Hanya bisa dibuka di komputer ini.',
   'qr.copy': 'Salin alamat',
   'qr.copied': '✅ Disalin',
+  'qr.copyManual': 'Alamat sudah dipilih. Tekan lama (atau Ctrl+C) untuk menyalin',
   'qr.close': 'Tutup',
   'qr.open': 'Tekan untuk menampilkan kode QR agar bisa dibuka di perangkat lain',
 };
