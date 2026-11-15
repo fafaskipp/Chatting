@@ -73,7 +73,7 @@ function toast(msg) {
   let started = null;
   const check = async () => {
     try {
-      const d = await (await fetch('/api/addresses', { cache: 'no-store' })).json();
+      const d = await (await fetch('/api/started', { cache: 'no-store' })).json();
       if (started && d.started && d.started !== started) location.reload();
       started = started || d.started;
     } catch {}
