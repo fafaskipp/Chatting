@@ -1,5 +1,6 @@
 // データのためしを入れる（動作の確認用）
-//   node tools/seed-demo.js [--url http://localhost:3000] [--force]
+//   node tools/seed-demo.js [--url http://localhost:3000] [--force] [--passwords kaki=abcd,ume=efgh]
+// ・各ユニットのアカウントでログインして入れます（はじめのパスワード＝ID。変えたユニットは --passwords で指定）
 // ・サーバーを起動したまま、別のターミナルで実行します（サーバーの API を使うので、自動翻訳も動きます）
 // ・8ユニットすべてに、利用者・直近7日分の記録・予定・写真を入れます。日付は「今日」から数えます
 // ・すでにデータのあるユニットは、まちがい防止のためとばします（--force で追加）
@@ -12,6 +13,8 @@ const flag = (n) => args.includes(n);
 const val = (n, d) => (args.includes(n) ? args[args.indexOf(n) + 1] : d);
 const BASE = val('--url', 'http://localhost:3000').replace(/\/$/, '');
 const FORCE = flag('--force');
+const PASSWORDS = Object.fromEntries(val('--passwords', '').split(',').filter(Boolean).map((x) => x.split('=')));
+const cookies = {}; // ユニットID → ログインの Cookie
 
 // ---------- 日付 ----------
 const z = (n) => String(n).padStart(2, '0');
@@ -92,10 +95,17 @@ function makePng(w, h, [r, g, b]) {
 }
 
 // ---------- API ----------
+// そのユニットのアカウントでログインする（書けるのは、そのユニットのアカウントだけ）
+async function login(unit) {
+  const res = await fetch(`${BASE}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: unit, password: PASSWORDS[unit] || unit }) });
+  if (!res.ok) throw new Error(`ログインできません（パスワードを変えた場合は --passwords ${unit}=パスワード をつけてください）`);
+  cookies[unit] = (res.headers.get('set-cookie') || '').split(';')[0];
+}
+
 async function call(unit, method, path, body) {
   const res = await fetch(`${BASE}/u/${unit}/api/${path}`, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+    headers: { Cookie: cookies[unit], ...(body ? { 'Content-Type': 'application/json' } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
@@ -103,7 +113,7 @@ async function call(unit, method, path, body) {
   return data;
 }
 async function upload(unit, buf, name) {
-  const res = await fetch(`${BASE}/u/${unit}/api/upload`, { method: 'POST', headers: { 'x-filename': name }, body: buf });
+  const res = await fetch(`${BASE}/u/${unit}/api/upload`, { method: 'POST', headers: { 'x-filename': name, Cookie: cookies[unit] }, body: buf });
   const data = await res.json();
   if (!res.ok) throw new Error('upload: ' + (data.error || res.status));
   return { file: data.file, type: data.type };
@@ -112,6 +122,7 @@ async function upload(unit, buf, name) {
 async function seedUnit(u, idx) {
   const rand = rng(1000 + idx * 77);
   const pick = (a) => a[Math.floor(rand() * a.length)];
+  await login(u.id);
   const existing = await call(u.id, 'GET', 'patients');
   const notes = await call(u.id, 'GET', 'notes');
   if ((existing.length || notes.length) && !FORCE) return { skipped: true };
@@ -186,7 +197,7 @@ async function seedUnit(u, idx) {
 (async () => {
   let units;
   try {
-    units = await (await fetch(`${BASE}/api/units`)).json();
+    units = (await (await fetch(`${BASE}/api/accounts/public`)).json()).filter((a) => a.role === 'unit').map((a) => ({ id: a.unit, name: a.name }));
   } catch {
     console.log(`✗ サーバーに つながりません（${BASE}）。先に ./start.sh（Windows は start.bat）でサーバーを起動してください。`);
     process.exit(1);

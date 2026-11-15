@@ -29,6 +29,9 @@ const state = {
   unitName: '', // ⚙️ 管理で設定するユニット・部屋の名前
   neighborUnit: '', // 夜勤で見る、となりのユニットのID
   units: [], // 全ユニットの名前（ユニットえらびの一覧と同じもの）
+  me: null, // ログイン中のアカウント
+  perms: { owner: false, staff: false, canWrite: false, canDelete: false, canManage: false, viewOnly: true }, // このユニットでしてよいこと（サーバーが決める）
+  accounts: {}, // アカウントID → 名前・種類（看護師が書いた記録に印をつけるため）
   categories: Object.keys(CATEGORY_COLORS),
   slots: 10,
   trashDays: 30,
@@ -71,9 +74,66 @@ async function api(path, opts = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401) location.href = '/login.html'; // ログインが切れた
   if (!res.ok) throw new Error(errorText(data));
   return data;
 }
+
+// ユニットに関係のないやりとり（自分のアカウント・ログアウト）
+async function rootApi(path, opts = {}) {
+  const res = await fetch('/api/' + path, {
+    method: opts.method || 'GET',
+    headers: opts.body ? { 'Content-Type': 'application/json' } : {},
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) location.href = '/login.html';
+  if (!res.ok) throw new Error(errorText(data));
+  return data;
+}
+
+// ---------- ログイン中のアカウントと、このユニットでしてよいこと ----------
+// 直せるか：ユニットのアカウントは全部。看護師・ケアマネジャーは自分が書いたものだけ
+const canEdit = (x) => state.perms.owner || (state.perms.staff && state.me && x.createdBy === state.me.id);
+// 見られる画面
+function allowedViews() {
+  if (state.perms.owner) return ['date', 'patient', 'cal', 'report', 'summary', 'manage', 'trash'];
+  if (state.perms.staff) return ['date', 'patient', 'cal', 'report', 'summary'];
+  return ['date', 'patient', 'cal'];
+}
+// 看護師・ケアマネジャーが書いた記録につける印
+function staffTag(x) {
+  const a = x.createdBy && state.accounts[x.createdBy];
+  return a && a.role !== 'unit' ? `<span class="tag tag-staff">${a.role === 'nurse' ? '🩺' : '📋'} ${esc(a.name)}</span>` : '';
+}
+
+function applyPerms() {
+  const p = state.perms;
+  document.body.classList.toggle('cant-write', !p.canWrite);
+  document.body.classList.toggle('view-only', p.viewOnly);
+  const views = allowedViews();
+  $$('.tab').forEach((tab) => (tab.hidden = !views.includes(tab.dataset.view)));
+  $('.tabs').style.setProperty('--tab-count', views.length);
+  renderWhoami();
+}
+
+function renderWhoami() {
+  const me = state.me;
+  const box = $('#whoami');
+  if (!me) return (box.innerHTML = '');
+  const p = state.perms;
+  const unitName = appName();
+  const changeHref = me.role === 'unit' ? `/u/${encodeURIComponent(me.unit)}/#account` : '/account.html';
+  box.innerHTML = `
+    <div class="whoami-row">
+      <span class="whoami-name">👤 ${esc(me.name)}</span>
+      <button type="button" class="btn btn-gray whoami-logout" id="btn-logout">${th('auth.logout')}</button>
+    </div>
+    ${p.viewOnly ? `<div class="whoami-banner view">${th('auth.viewOnly', { unit: unitName })}　<a href="/u/${encodeURIComponent(me.unit)}/">${th('auth.backToOwn')}</a></div>` : ''}
+    ${p.staff ? `<div class="whoami-banner staff">${th('auth.staffNote')}</div>` : ''}
+    ${me.mustChange ? `<div class="whoami-banner warn">${th('auth.mustChange')} <a href="${changeHref}" id="must-change">${th('auth.changeLink')}</a></div>` : ''}`;
+}
+
 
 // ブラウザが保存を許可していないとき（Safari のプライベートなど）でも止まらないように
 function remember(key, value) {
@@ -162,6 +222,9 @@ function textBlock(x, field, cls) {
 }
 
 function renderStatic() {
+  $('#pw-next-label').textContent = t('acct.next', { n: 4 });
+  $('#pw-id').textContent = state.me ? t('acct.ownHint', { id: state.me.id }) : '';
+  renderWhoami();
   const cur = I18N.LANGS.find((l) => l.code === I18N.lang);
   $('#lang-code').textContent = cur ? cur.short : 'JA';
   renderUnitName();
@@ -176,7 +239,8 @@ function renderStatic() {
 function renderNeighbor() {
   const box = $('#neighbor');
   const nb = state.units.find((u) => u.id === state.neighborUnit);
-  if (!nb) {
+  // となりのユニットのボタンは、自分のユニットを開いているときだけ（ほかのユニットを見ているときは、上の「もどる」を使う）
+  if (!nb || !state.perms.owner) {
     box.innerHTML = '';
     return;
   }
@@ -240,8 +304,8 @@ function noteHtml(n, showPatient, mode = 'normal', nameOverride) {
     : `<span class="tag tag-none">${th('patient.shared')}</span>`;
   const buttons =
     mode === 'normal'
-      ? `<button class="btn btn-edit" data-edit="${n.id}">${th('btn.edit')}</button>
-         <button class="btn btn-del" data-del="${n.id}">${th('btn.delete')}</button>`
+      ? `${canEdit(n) ? `<button class="btn btn-edit" data-edit="${n.id}">${th('btn.edit')}</button>` : ''}
+         ${state.perms.canDelete ? `<button class="btn btn-del" data-del="${n.id}">${th('btn.delete')}</button>` : ''}`
       : mode === 'trash'
         ? `<button class="btn btn-restore" data-nrestore="${n.id}">${th('btn.restore')}</button>
            <button class="btn btn-del" data-npurge="${n.id}">${th('btn.purge')}</button>`
@@ -254,6 +318,7 @@ function noteHtml(n, showPatient, mode = 'normal', nameOverride) {
         <span class="note-time">${n.time ? '🕒 ' + esc(n.time) : ''}</span>
         ${showPatient ? patient : ''}
         <span class="tag" style="background:${catColor(n.category)}">${esc(catLabel(n.category))}</span>
+        ${staffTag(n)}
       </div>
       ${textBlock(n, 'text', 'note-text')}
       ${n.media.length ? `<div class="media-grid">${mediaHtml(n.media, false)}</div>` : ''}
@@ -416,10 +481,10 @@ function eventHtml(e, withDate) {
     <div class="ev-body">
       <div class="title">${esc(trField(e, 'title'))}</div>
       ${trOf(e) && trOf(e).title ? `<div class="tr-orig-line">${th('note.orig')}${esc(e.title)}</div>` : ''}
-      <div class="chips">${who}${e.repeat ? `<span class="tag tag-none">🔁 ${esc(repeatLabel(e.repeat))}</span>` : ''}</div>
+      <div class="chips">${who}${staffTag(e)}${e.repeat ? `<span class="tag tag-none">🔁 ${esc(repeatLabel(e.repeat))}</span>` : ''}</div>
       ${textBlock(e, 'memo', 'text')}${e.memo ? '' : trHint(e)}
     </div>
-    <button class="btn btn-edit" data-eedit="${e.id}">${th('btn.edit')}</button>
+    ${canEdit(e) ? `<button class="btn btn-edit" data-eedit="${e.id}">${th('btn.edit')}</button>` : ''}
   </div>`;
 }
 
@@ -519,7 +584,7 @@ function openEventForm(e, date) {
   f.memo.value = e ? e.memo : '';
   state.eventForm = { patientId: e ? e.patientId : null, repeat: e ? e.repeat : '' };
   $('#eform-title').textContent = t(e ? 'eform.titleEdit' : 'eform.titleAdd');
-  $('#eform-delete').hidden = !e;
+  $('#eform-delete').hidden = !e || !state.perms.canDelete;
   renderEventChoices();
   $('#event-dialog').showModal();
 }
@@ -947,6 +1012,7 @@ async function refresh() {
 }
 
 function showView(view) {
+  if (!allowedViews().includes(view)) view = 'date';
   state.view = view;
   $$('.tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.view === view));
   $$('.view').forEach((v) => (v.hidden = v.id !== 'view-' + view));
@@ -1235,15 +1301,67 @@ function loadInfo() {
     state.addresses = info.addresses || [];
     state.port = info.port;
     state.tr = info.translator;
+    state.me = info.me;
+    state.perms = info.perms;
     renderStatic();
+    applyPerms();
     if (state.view === 'manage') renderSlots();
   })
   .catch(() => {});
 }
-loadInfo();
 setInterval(loadInfo, 30000);
+
+// ログアウト
+document.addEventListener('click', async (e) => {
+  if (e.target.closest('#btn-logout')) {
+    try {
+      await fetch('/api/logout', { method: 'POST' });
+    } catch {}
+    location.href = '/login.html';
+  } else if (e.target.closest('#must-change') && state.perms.owner) {
+    e.preventDefault();
+    openAccountCard();
+  }
+});
+
+// ⚙️ 管理の「このアカウントのパスワードを変える」を開く
+function openAccountCard() {
+  showView('manage');
+  const card = $('#pw-form');
+  card.scrollIntoView({ block: 'center' });
+  card.current.focus();
+}
+
+$('#pw-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const err = $('#pw-error');
+  err.hidden = true;
+  try {
+    if (f.next.value !== f.again.value) throw new Error(t('acct.mismatch'));
+    state.me = await rootApi('me/password', { method: 'PUT', body: { current: f.current.value, next: f.next.value } });
+    f.reset();
+    toast(t('acct.changed'));
+    renderWhoami();
+  } catch (ex) {
+    err.textContent = ex.message;
+    err.hidden = false;
+  }
+});
 
 I18N.init();
 renderStatic();
-refresh();
+// 先に「だれがログインしていて、何をしてよいか」をもらってから、記録を出す
+Promise.all([
+  loadInfo(),
+  fetch('/api/accounts/public')
+    .then((r) => r.json())
+    .then((list) => (state.accounts = Object.fromEntries(list.map((a) => [a.id, a]))))
+    .catch(() => {}),
+]).then(() => {
+  if (location.hash === '#account' && state.perms.owner) {
+    history.replaceState(null, '', location.pathname);
+    refresh().then(openAccountCard);
+  } else refresh();
+});
 setInterval(poll, 10000);

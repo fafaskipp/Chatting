@@ -9,6 +9,7 @@ const os = require('os');
 const crypto = require('crypto');
 const { createStore, localDate } = require('./lib/store');
 const { createTranslator } = require('./lib/translator');
+const { createAuth } = require('./lib/auth');
 
 const PORT = Number(process.env.PORT) || 3000;
 const ROOT = __dirname;
@@ -241,11 +242,14 @@ function serveFile(req, res, filePath, extraHeaders = {}) {
 async function handleApi(req, res, url, unit, apiPath) {
   const { store, uploadDir } = unit;
   const parts = apiPath.split('/').filter(Boolean); // ['api', 'notes', id?, action?]
+  const me = req.me;
+  // だれが何をしてよいかは、画面ではなくここ（サーバー）で決める
+  const perms = auth.authorize(me, unit.id, req.method, parts, store);
   const resource = parts[1];
   const method = req.method;
 
   if (resource === 'info' && method === 'GET') {
-    return sendJson(res, 200, { addresses: lanAddresses(), port: PORT, slots: SLOT_COUNT, trashDays: TRASH_DAYS, translator: translator.status(), unit: { id: unit.id, name: unit.cfg.name } });
+    return sendJson(res, 200, { addresses: lanAddresses(), port: PORT, slots: SLOT_COUNT, trashDays: TRASH_DAYS, translator: translator.status(), unit: { id: unit.id, name: unit.cfg.name }, me, perms });
   }
 
   // 写真・動画のアップロード（本文はファイルそのもの）
@@ -290,7 +294,7 @@ async function handleApi(req, res, url, unit, apiPath) {
   }
 
   const body = method === 'POST' || method === 'PUT' ? await readJson(req) : {};
-  return sendJson(res, 200, store.handle(method, apiPath, url.searchParams, body));
+  return sendJson(res, 200, store.handle(method, apiPath, url.searchParams, body, { by: me.id }));
 }
 
 // ---------- サーバー ----------
@@ -311,14 +315,73 @@ function unitList() {
   });
 }
 
+// 看護師・ケアマネジャーのホームに出す「今日の大事なこと」：全ユニットの、今日の重要な記録とヒヤリ・事故
+function overview(me) {
+  if (me.role === 'unit') throw Object.assign(new Error('この操作はできません'), { status: 403, code: 'staffOnly' });
+  const today = localDate();
+  const out = [];
+  for (const u of units.values()) {
+    const name = u.store.db.settings.unitName || u.cfg.name;
+    for (const n of u.store.db.notes) {
+      if (n.deletedAt || n.date !== today) continue;
+      const incident = u.store.isIncident(n);
+      if (!n.important && !incident) continue;
+      const p = n.patientId && u.store.db.patients.find((x) => x.id === n.patientId);
+      out.push({ unit: u.id, unitName: name, color: u.cfg.color, id: n.id, time: n.time, category: n.category, important: n.important, incident, patient: p ? p.name : '', text: n.text, tr: n.tr });
+    }
+  }
+  return out.sort((a, b) => (b.time || '').localeCompare(a.time || ''));
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
     const p = url.pathname;
 
-    // ユニットえらび（トップページ）用
-    if (p === '/api/units' && req.method === 'GET') return sendJson(res, 200, unitList());
+    // ---------- ログイン（だれでも使える入り口） ----------
+    if (p === '/api/accounts/public' && req.method === 'GET') {
+      const byId = new Map([...units.values()].map((u) => [u.id, u.cfg]));
+      return sendJson(res, 200, auth.publicList().map((a) => ({ ...a, color: a.unit && byId.get(a.unit) ? byId.get(a.unit).color : '', shape: a.unit && byId.get(a.unit) ? byId.get(a.unit).shape : '' })));
+    }
+    if (p === '/api/login' && req.method === 'POST') {
+      const body = await readJson(req);
+      const r = auth.login(body.id, body.password);
+      res.setHeader('Set-Cookie', r.cookie);
+      return sendJson(res, 200, { account: r.account, home: r.account.role === 'unit' ? `/u/${r.account.unit}/` : '/' });
+    }
+    if (p === '/api/logout' && req.method === 'POST') {
+      res.setHeader('Set-Cookie', auth.logout(req));
+      return sendJson(res, 200, { ok: true });
+    }
 
+    // ---------- ここから先は、ログインが必要 ----------
+    const me = auth.who(req);
+    req.me = me;
+    const isApi = p.startsWith('/api/') || /^\/u\/[^/]+\/(api|uploads)\//.test(p);
+    // 画面の部品（.js / .css / 辞書）は記録を含まないので、ログイン前でも読める。記録・写真・画面そのものは読めない
+    const isAsset = !isApi && /\.(js|css|gz|txt|md|svg|png|ico)$/.test(p) && !p.includes('/uploads/');
+    if (!me && !isAsset && p !== '/login.html') {
+      if (isApi) return sendJson(res, 401, { error: 'ログインしてください', code: 'unauthorized' });
+      res.writeHead(302, { Location: '/login.html', 'Cache-Control': 'no-store' });
+      return res.end();
+    }
+    if (me && p === '/login.html' && !url.searchParams.has('switch')) {
+      res.writeHead(302, { Location: me.role === 'unit' ? `/u/${me.unit}/` : '/', 'Cache-Control': 'no-store' });
+      return res.end();
+    }
+
+    if (p === '/api/me' && req.method === 'GET') return sendJson(res, 200, me);
+    if (p === '/api/me/password' && req.method === 'PUT') {
+      const body = await readJson(req);
+      return sendJson(res, 200, auth.changeOwnPassword(req, me, body.current, body.next));
+    }
+    if (p === '/api/accounts' && req.method === 'GET') return sendJson(res, 200, auth.adminList(me));
+    const am = /^\/api\/accounts\/([a-z0-9_-]+)$/.exec(p);
+    if (am && req.method === 'PUT') return sendJson(res, 200, auth.adminUpdate(me, am[1], await readJson(req)));
+
+    // ユニットえらび（ホーム）用
+    if (p === '/api/units' && req.method === 'GET') return sendJson(res, 200, unitList());
+    if (p === '/api/overview' && req.method === 'GET') return sendJson(res, 200, overview(me));
     // /u/<ユニットID>/...  → そのユニットだけの記録・写真・画面
     const m = /^\/u\/([^/]+)(\/.*)?$/.exec(p);
     if (m) {
@@ -372,7 +435,9 @@ function lanAddresses() {
     .sort((a, b) => rank(a) - rank(b));
 }
 
-for (const cfg of loadUnitConfigs()) units.set(cfg.id, createUnit(cfg));
+const unitConfigs = loadUnitConfigs();
+for (const cfg of unitConfigs) units.set(cfg.id, createUnit(cfg));
+const auth = createAuth({ dataDir: DATA_DIR, units: unitConfigs });
 
 const translator = createTranslator({ stores: () => [...units.values()].map((u) => u.store), rootDir: __dirname });
 translator.start();

@@ -28,6 +28,7 @@
   </nav>
 
   <main>
+    <div id="whoami" class="whoami no-print"></div>
     <h2 id="print-title" class="print-only"></h2>
 
     <!-- 日付で見る -->
@@ -149,6 +150,17 @@
       </form>
       <p class="hint" id="slot-hint"></p>
       <div id="slot-list" class="slot-grid"></div>
+      <form id="pw-form" class="card" autocomplete="off" style="margin-top:22px">
+        <h2 data-i18n="acct.own">🔑 このアカウントのパスワードを変える</h2>
+        <p class="sub-hint" id="pw-id" style="margin-bottom:10px"></p>
+        <div class="form">
+          <label><span data-i18n="acct.current">今のパスワード</span> <input type="password" name="current" autocomplete="current-password" required></label>
+          <label><span id="pw-next-label"></span> <input type="password" name="next" autocomplete="new-password" required></label>
+          <label><span data-i18n="acct.again">新しいパスワード（もう一度）</span> <input type="password" name="again" autocomplete="new-password" required></label>
+          <p class="form-error" id="pw-error" role="alert" hidden></p>
+          <div class="actions"><button type="submit" class="btn btn-save" data-i18n="acct.change">🔑 パスワードを変える</button></div>
+        </div>
+      </form>
       <div id="server-info" class="info"></div>
     </section>
 

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>介護日記</title>
+  <link rel="stylesheet" href="home.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="who" id="who"></div>
+    <div class="langs"><span id="langs" class="langs-inner" role="group" aria-label="Language"></span></div>
+    <header><h1 data-i18n="acct.title">🔑 アカウントの設定</h1></header>
+    <main>
+      <form id="own" class="card" autocomplete="off">
+        <h2 data-i18n="acct.own">🔑 このアカウントのパスワードを変える</h2>
+        <p class="lead" id="own-id"></p>
+        <label class="f"><span data-i18n="acct.current">今のパスワード</span><input type="password" name="current" autocomplete="current-password" required></label>
+        <label class="f"><span id="next-label"></span><input type="password" name="next" autocomplete="new-password" required></label>
+        <label class="f"><span data-i18n="acct.again">新しいパスワード（もう一度）</span><input type="password" name="again" autocomplete="new-password" required></label>
+        <p class="error" id="own-error" role="alert" hidden></p>
+        <div class="form-actions"><button type="submit" class="btn" data-i18n="acct.change">🔑 パスワードを変える</button></div>
+      </form>
+      <div id="admin"></div>
+    </main>
+  </div>
+  <div class="toast" id="toast" hidden></div>
+  <script src="lang/ja.js"></script>
+  <script src="lang/id.js"></script>
+  <script src="lang/en.js"></script>
+  <script src="i18n.js"></script>
+  <script src="home-common.js"></script>
+  <script src="account.js"></script>
+</body>
+</html>

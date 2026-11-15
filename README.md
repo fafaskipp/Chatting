@@ -4,6 +4,34 @@ Aplikasi web catatan harian untuk pekerjaan kaigo. Berjalan **offline** di satu 
 
 > **Proyek ini terpisah dari versi lama "1 server = 1 unit".** Di sini **1 server melayani 8 unit sekaligus**, dan catatan tiap unit disimpan **terpisah** (pasien, catatan, agenda, foto, tempat sampah, dan backup masing-masing). Satu unit tidak bisa melihat atau mengubah data unit lain, kecuali dengan membuka halaman unit itu.
 
+## Login (10 akun)
+Membuka aplikasi selalu ke **halaman login**: pilih tombol akun, lalu ketik password.
+
+| Akun | ID | Password awal | Setelah login |
+|---|---|---|---|
+| 8 unit | `momo` `ume` `kaki` `biwa` `nashi` `yuzu` `mikan` `ringo` | sama dengan ID | langsung ke catatan unitnya |
+| Nurse (看護師) | `nurse` | `nurse` | halaman semua unit |
+| Care manager (ケアマネジャー, admin) | `care` | `care` | halaman semua unit |
+
+**Password awal mudah ditebak — gantilah.** Aplikasi menampilkan pengingat kuning sampai diganti (minimal 4 karakter).
+
+Hak akses (diperiksa di **server**, bukan hanya disembunyikan di layar):
+
+| | Unit sendiri | Unit lain |
+|---|---|---|
+| Akun unit | semua: tulis, edit, hapus, pasien, agenda, pengaturan, tempat sampah | **hanya melihat** tab 📅 日付・👤 利用者・🗓 予定 (termasuk unit sebelah) |
+| Nurse / Care manager | — | melihat semua unit (termasuk 評価・まとめ), **menulis** catatan & agenda, **mengedit hanya tulisannya sendiri**, **tidak bisa menghapus apa pun** |
+
+- Menghapus (catatan, agenda, pasien, tempat sampah), data pasien, dan pengaturan unit hanya milik **akun unit itu** — unit adalah pihak terkuat atas catatannya. Catatan yang ditulis nurse/care manager diberi tanda 🩺/📋 dan bisa dihapus oleh unit.
+- Akun unit membuka unit lain lewat tombol 🏠 (semua unit) atau tombol unit sebelah di paling bawah 📅 日付. Saat melihat unit lain muncul pita biru "見るだけ" dan tombol tulis/edit/hapus hilang.
+- **Ganti password sendiri:** akun unit di tab ⚙️ 管理 (kartu 🔑); nurse & care manager lewat tombol 🔑 アカウントの設定 di home.
+- **Care manager** di halaman itu juga bisa mengganti nama dan mereset password ke-10 akun. Mereset password mengeluarkan akun itu dari semua perangkat.
+- Home nurse/care manager menampilkan **🔔 今日の大事なこと**: catatan penting dan ヒヤリ・事故 hari ini dari semua unit.
+- Masa login: akun unit 30 hari per perangkat; nurse/care manager 12 jam. 5 kali salah password → tunggu 1 menit.
+- **Lupa password** (termasuk care manager): di komputer server `node tools/reset-password.js` (daftar akun), `node tools/reset-password.js care` (kembali ke password awal), atau `node tools/reset-password.js care passwordbaru`.
+- Akun disimpan di `data/accounts.json` (password dalam bentuk hash scrypt), sesi di `data/sessions.json`.
+- Catatan keamanan: login berjalan lewat HTTP di jaringan lokal, jadi password tidak terenkripsi di kabel/Wi-Fi kantor. Jangan buka server ini ke internet.
+
 ## Cara kerja 8 unit
 - Buka `http://ALAMAT-IP:3000` → muncul **halaman pilih unit** (8 tombol buah: モモの木・うめの木・かきの木・びわの木・なしの木・ゆずの木・みかん・りんご) dengan jumlah catatan hari ini.
 - Tekan satu unit → masuk ke `http://ALAMAT-IP:3000/u/ume/` (alamat tiap unit tetap, boleh dibuat shortcut / ikon layar utama di HP & iPad unit itu).
@@ -60,7 +88,7 @@ Port, lokasi data, dan jumlah slot bisa diganti: `PORT=8080 DATA_DIR=D:\kaigo-da
 > Catatan: data pasien yang dihapus akan hilang permanen 30 hari kemudian. Kalau masih ingin menyimpan catatannya, kembalikan dulu pasiennya (↩️ 元に戻す), lalu cetak.
 
 ## Data demo untuk mengecek sistem
-Saat server menyala, di terminal lain: `node tools/seed-demo.js` (atau `--url http://ALAMAT:3000`). Mengisi 8 unit: 5 pasien, ±50 catatan 7 hari terakhir (termasuk jatuh/ヒヤリハット, catatan penting, istilah perawatan untuk uji penerjemah), agenda, dan 3 foto contoh per unit; pasangan unit sebelah juga diatur. Unit yang sudah berisi dilewati (tambah `--force` untuk menambah lagi). Mengulang dari nol: hentikan server lalu hapus folder `data/`.
+Saat server menyala, di terminal lain: `node tools/seed-demo.js` (atau `--url http://ALAMAT:3000`). Skrip login sebagai tiap akun unit dengan password awal; kalau sudah diganti, tambahkan `--passwords kaki=xxxx,ume=yyyy`. Mengisi 8 unit: 5 pasien, ±50 catatan 7 hari terakhir (termasuk jatuh/ヒヤリハット, catatan penting, istilah perawatan untuk uji penerjemah), agenda, dan 3 foto contoh per unit; pasangan unit sebelah juga diatur. Unit yang sudah berisi dilewati (tambah `--force` untuk menambah lagi). Mengulang dari nol: hentikan server lalu hapus folder `data/`.
 
 ## Catatan
 - Versi demo (iPad), halaman launcher terpisah, dan PDF manual ada di proyek lama dan belum dipindah ke sini.

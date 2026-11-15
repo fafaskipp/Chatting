@@ -43,7 +43,7 @@ for (const code of LANGS.slice(1)) {
 }
 
 console.log('2) プログラムが使っている名前');
-const files = ['public/app.js', 'public/index.html', 'public/launcher.html', 'public/launcher.js', 'public/i18n.js', 'public/furigana.js'].map((f) => [f, path.join(root, f)]);
+const files = ['public/app.js', 'public/index.html', 'public/launcher.html', 'public/launcher.js', 'public/home-common.js', 'public/login.html', 'public/login.js', 'public/account.html', 'public/account.js', 'public/i18n.js', 'public/furigana.js'].map((f) => [f, path.join(root, f)]);
 const used = new Set();
 for (const [name, file] of files) {
   if (!fs.existsSync(file)) continue;
@@ -59,7 +59,7 @@ for (const [name, file] of files) {
 ['none', 'weekly', 'monthly'].forEach((k) => used.add('repeat.' + k));
 for (const k of ['meal', 'water', 'toilet', 'bath', 'med', 'health', 'sleep', 'incident', 'activity', 'family', 'other', 'visit']) used.add('cat.' + k);
 const codes = new Set();
-for (const f of ['lib/store.js', 'server.js']) {
+for (const f of ['lib/store.js', 'lib/auth.js', 'server.js']) {
   const text = fs.readFileSync(path.join(root, f), 'utf8');
   for (const m of text.matchAll(/fail\(\d+,[^;\n]*?,\s*'(\w+)'/g)) codes.add(m[1]);
   for (const m of text.matchAll(/code:\s*'(\w+)'/g)) codes.add(m[1]);
