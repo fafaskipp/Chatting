@@ -18,11 +18,16 @@
     }
     button { font: inherit; color: inherit; }
     .wrap { max-width: 980px; margin: 0 auto; }
-    .langs { display: flex; justify-content: flex-end; gap: 8px; padding-top: 14px; }
+    .langs { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding-top: 14px; }
+    .langs-inner { display: flex; gap: 8px; flex-wrap: wrap; }
+    rt { display: none; font-size: .55em; font-weight: 600; }
+    .furigana-on rt { display: revert; }
+    .furigana-on header p, .furigana-on .unit .name { line-height: 1.9; }
     .langs button {
       min-height: 44px; padding: 6px 14px; border: 2px solid var(--line); border-radius: 999px; background: var(--card);
       font-weight: 800; cursor: pointer; color: var(--ink);
     }
+    #btn-furi { border-style: dashed; }
     .langs button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
     header { text-align: center; padding: 10px 0 18px; }
     header h1 { margin: 0; font-size: clamp(1.6rem, 5vw, 2.4rem); font-weight: 800; letter-spacing: .04em; }
@@ -57,7 +62,7 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="langs" id="langs" role="group" aria-label="Language"></div>
+    <div class="langs"><button type="button" id="btn-furi" aria-pressed="false" data-i18n-aria="btn.furigana" data-i18n-title="btn.furigana">ふりがな</button><span id="langs" class="langs-inner" role="group" aria-label="Language"></span></div>
     <header>
       <h1><span class="tree" aria-hidden="true">🌳</span> <span data-i18n="launcher.title">ユニットをえらんでね</span></h1>
       <p data-i18n="launcher.sub">押すと、そのユニットの介護日記がひらきます</p>
@@ -69,5 +74,6 @@
   <script src="lang/en.js"></script>
   <script src="i18n.js"></script>
   <script src="launcher.js"></script>
+  <script src="furigana.js"></script>
 </body>
 </html>

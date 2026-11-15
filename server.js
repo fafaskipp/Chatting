@@ -358,7 +358,8 @@ function servePublic(req, res, rel, isRoot) {
   }
   const filePath = path.normalize(path.join(PUBLIC_DIR, rel));
   if (!filePath.startsWith(PUBLIC_DIR + path.sep)) return sendJson(res, 403, { error: '禁止されています', code: 'forbidden' });
-  return serveFile(req, res, filePath, { 'Cache-Control': 'no-cache' });
+  const longCache = rel.startsWith('/furigana/dict/');
+  return serveFile(req, res, filePath, { 'Cache-Control': longCache ? 'max-age=31536000, immutable' : 'no-cache' });
 }
 
 // 家や施設の Wi-Fi でよく使うアドレス（192.168.x.x）を先に出す
