@@ -91,6 +91,10 @@ Port, lokasi data, dan jumlah slot bisa diganti: `PORT=8080 DATA_DIR=D:\kaigo-da
 ## Data demo untuk mengecek sistem
 Saat server menyala, di terminal lain: `node tools/seed-demo.js` (atau `--url http://ALAMAT:3000`). Skrip login sebagai tiap akun unit dengan password awal; kalau sudah diganti, tambahkan `--passwords kaki=xxxx,ume=yyyy`. Mengisi 8 unit: 5 pasien, ±50 catatan 7 hari terakhir (termasuk jatuh/ヒヤリハット, catatan penting, istilah perawatan untuk uji penerjemah), agenda, dan 3 foto contoh per unit; pasangan unit sebelah juga diatur. Unit yang sudah berisi dilewati (tambah `--force` untuk menambah lagi). Mengulang dari nol: hentikan server lalu hapus folder `data/`.
 
+## Panduan untuk staf (`docs/`)
+- `docs/manual-ja.pdf` — panduan cetak A4 22 halaman dalam bahasa Jepang, huruf besar, satu langkah per halaman, dengan foto layar versi 8 unit: login, menulis, melihat, agenda, hapus & tempat sampah, pop-up 🔔, shift malam (unit sebelah), home, nurse/care manager, ganti password, furigana & bahasa, tabel hak akses, dan こまったとき. `docs/manual-ja.html` adalah versi yang bisa dibuka di browser.
+- Sampul punya kolom untuk nama unit dan ID login. Password jangan ditulis di panduan.
+
 ## Catatan
-- Versi demo (iPad), halaman launcher terpisah, dan PDF manual ada di proyek lama dan belum dipindah ke sini.
+- Versi demo (iPad) ada di proyek lama dan belum dipindah ke sini.
 - Cek kelengkapan kamus bahasa: `node tools/check-lang.js`.
