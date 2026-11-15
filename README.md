@@ -59,6 +59,9 @@ Port, lokasi data, dan jumlah slot bisa diganti: `PORT=8080 DATA_DIR=D:\kaigo-da
 
 > Catatan: data pasien yang dihapus akan hilang permanen 30 hari kemudian. Kalau masih ingin menyimpan catatannya, kembalikan dulu pasiennya (↩️ 元に戻す), lalu cetak.
 
+## Data demo untuk mengecek sistem
+Saat server menyala, di terminal lain: `node tools/seed-demo.js` (atau `--url http://ALAMAT:3000`). Mengisi 8 unit: 5 pasien, ±50 catatan 7 hari terakhir (termasuk jatuh/ヒヤリハット, catatan penting, istilah perawatan untuk uji penerjemah), agenda, dan 3 foto contoh per unit; pasangan unit sebelah juga diatur. Unit yang sudah berisi dilewati (tambah `--force` untuk menambah lagi). Mengulang dari nol: hentikan server lalu hapus folder `data/`.
+
 ## Catatan
 - Versi demo (iPad), halaman launcher terpisah, dan PDF manual ada di proyek lama dan belum dipindah ke sini.
 - Cek kelengkapan kamus bahasa: `node tools/check-lang.js`.
