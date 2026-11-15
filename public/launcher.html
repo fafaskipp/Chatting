@@ -11,6 +11,7 @@
     <div class="who" id="who"></div>
     <div class="langs"><button type="button" id="btn-furi" aria-pressed="false" data-i18n-aria="btn.furigana" data-i18n-title="btn.furigana">ふりがな</button><span id="langs" class="langs-inner" role="group" aria-label="Language"></span></div>
     <header>
+      <button type="button" class="brand" data-qr="/" data-i18n-title="qr.open">📒 <span data-i18n="app.name">介護日記</span> <span class="qr-ic" aria-hidden="true">📱</span></button>
       <h1><span class="tree" aria-hidden="true">🌳</span> <span data-i18n="launcher.title">ユニットをえらんでね</span></h1>
       <p data-i18n="launcher.sub">押すと、そのユニットの介護日記がひらきます</p>
     </header>
@@ -27,6 +28,8 @@
   <script src="home-common.js"></script>
   <script src="launcher.js"></script>
   <script src="furigana.js"></script>
+  <script src="vendor/qrcode.js"></script>
+  <script src="qr.js"></script>
   <div class="toast" id="toast" hidden></div>
 </body>
 </html>

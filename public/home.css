@@ -99,6 +99,12 @@ button.unit { font: inherit; cursor: pointer; width: 100%; }
 @media (max-width: 600px) { .acct { grid-template-columns: 1fr 1fr; } .acct .id { grid-column: 1 / -1; } .acct .btn { grid-column: 1 / -1; } }
 .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 12px 22px; border-radius: 999px; font-weight: 800; z-index: 10; }
 
+/* 📒 介護日記（押すとQRコード） */
+.brand { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 6px 16px; border: 2px dashed var(--line); border-radius: 999px; background: var(--card); color: var(--ink); font: inherit; font-size: 1.1rem; font-weight: 800; cursor: pointer; }
+.brand:hover, h1[data-qr]:hover { border-color: var(--accent); }
+.qr-ic { font-size: .8em; opacity: .85; }
+h1[data-qr] { display: inline-block; padding: 2px 12px; border: 2px dashed transparent; border-radius: 14px; }
+
 /* この1週間の大事なこと（看護師・ケアマネジャー） */
 .week .day { margin-top: 14px; }
 .week .day-h { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; gap: 8px; margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--bg-dot); font-size: 1.1rem; }

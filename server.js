@@ -358,6 +358,8 @@ const server = http.createServer(async (req, res) => {
       res.setHeader('Set-Cookie', r.cookie);
       return sendJson(res, 200, { account: r.account, home: r.account.role === 'unit' ? `/u/${r.account.unit}/` : '/' });
     }
+    // QRコード用：ほかの端末から届くアドレス（記録は含まない）
+    if (p === '/api/addresses' && req.method === 'GET') return sendJson(res, 200, { addresses: lanAddresses(), port: PORT });
     if (p === '/api/logout' && req.method === 'POST') {
       res.setHeader('Set-Cookie', auth.logout(req));
       return sendJson(res, 200, { ok: true });

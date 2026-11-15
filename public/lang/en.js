@@ -322,4 +322,13 @@
   'home.weekLead': '⭐ Important notes and ⚠️ incidents from today back 7 days, newest first ({n} notes, {inc} incidents).',
   'home.dayNone': 'No important notes or incidents on this day.',
   'home.allUnits': 'All units',
+  // QRコード
+  'qr.title': 'Open on another device',
+  'qr.lead': 'Scan this QR code with the camera of a phone or tablet.',
+  'qr.hint': 'It opens only when connected to the same Wi-Fi (the facility network).',
+  'qr.noNet': 'No network found. It can only be opened on this computer.',
+  'qr.copy': 'Copy address',
+  'qr.copied': '✅ Copied',
+  'qr.close': 'Close',
+  'qr.open': 'Press to show a QR code for opening on another device',
 };

@@ -323,4 +323,13 @@
   'home.weekLead': 'Catatan ⭐ penting dan ⚠️ insiden dari hari ini sampai 7 hari lalu, yang terbaru di atas ({n} catatan, {inc} insiden).',
   'home.dayNone': 'Tidak ada catatan penting atau insiden pada hari ini.',
   'home.allUnits': 'Semua unit',
+  // QRコード
+  'qr.title': 'Buka di perangkat lain',
+  'qr.lead': 'Pindai kode QR ini dengan kamera HP atau tablet.',
+  'qr.hint': 'Hanya bisa dibuka jika tersambung ke Wi-Fi yang sama (jaringan fasilitas).',
+  'qr.noNet': 'Jaringan tidak ditemukan. Hanya bisa dibuka di komputer ini.',
+  'qr.copy': 'Salin alamat',
+  'qr.copied': '✅ Disalin',
+  'qr.close': 'Tutup',
+  'qr.open': 'Tekan untuk menampilkan kode QR agar bisa dibuka di perangkat lain',
 };

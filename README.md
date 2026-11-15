@@ -33,6 +33,13 @@ Hak akses (diperiksa di **server**, bukan hanya disembunyikan di layar):
 - Akun disimpan di `data/accounts.json` (password dalam bentuk hash scrypt), sesi di `data/sessions.json`.
 - Catatan keamanan: login berjalan lewat HTTP di jaringan lokal, jadi password tidak terenkripsi di kabel/Wi-Fi kantor. Jangan buka server ini ke internet.
 
+## 📱 QR code untuk membuka di perangkat lain
+Tekan **📒 介護日記 📱** di home atau halaman login, atau **nama unit** di bar biru halaman unit. Pop-up QR code muncul dan bisa dipindai kamera HP/tablet.
+- Kalau aplikasi dibuka di komputer server (`localhost`), QR otomatis memakai **alamat jaringan** (mis. `http://192.168.1.10:3000`), bukan localhost. Kalau ada lebih dari satu jaringan, alamat bisa dipilih.
+- QR dari halaman unit langsung membuka unit itu (`/u/kaki/`); perangkat baru akan diminta login dulu.
+- Dibuat offline dengan `public/vendor/qrcode.js` (qrcode-generator, MIT). Ada tombol 📋 untuk menyalin alamat.
+- HP harus tersambung ke Wi-Fi yang sama.
+
 ## Cara kerja 8 unit
 - Buka `http://ALAMAT-IP:3000` → muncul **halaman pilih unit** (8 tombol buah: モモの木・うめの木・かきの木・びわの木・なしの木・ゆずの木・みかん・りんご) dengan jumlah catatan hari ini.
 - Tekan satu unit → masuk ke `http://ALAMAT-IP:3000/u/ume/` (alamat tiap unit tetap, boleh dibuat shortcut / ikon layar utama di HP & iPad unit itu).
