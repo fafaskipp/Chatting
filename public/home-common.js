@@ -67,6 +67,22 @@ function toast(msg) {
   toast.timer = setTimeout(() => (el.hidden = true), 2600);
 }
 
+// ファイルを新しくしてサーバーを起動しなおしたとき、前から開いていた画面は古いまま。
+// 画面にもどってきたとき（タブを開く・アプリにもどる）に気づいて、読みなおす
+(function () {
+  let started = null;
+  const check = async () => {
+    try {
+      const d = await (await fetch('/api/addresses', { cache: 'no-store' })).json();
+      if (started && d.started && d.started !== started) location.reload();
+      started = started || d.started;
+    } catch {}
+  };
+  check();
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && check());
+  window.addEventListener('focus', check);
+})();
+
 // 言語のボタン（#langs があれば出す）。onChange は、言語を変えたあとに画面を書きなおす関数
 function renderLangs(onChange) {
   const box = $('#langs');

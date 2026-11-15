@@ -163,6 +163,7 @@ function createUnit(cfg) {
 }
 
 const units = new Map(); // id -> unit（下の起動のところで入れる）
+const SERVER_STARTED = Date.now(); // サーバーを入れかえて起動しなおしたら変わる（古い画面を読みなおすため）
 
 function newId() {
   return crypto.randomBytes(8).toString('hex');
@@ -359,7 +360,7 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { account: r.account, home: r.account.role === 'unit' ? `/u/${r.account.unit}/` : '/' });
     }
     // QRコード用：ほかの端末から届くアドレス（記録は含まない）
-    if (p === '/api/addresses' && req.method === 'GET') return sendJson(res, 200, { addresses: lanAddresses(), port: PORT });
+    if (p === '/api/addresses' && req.method === 'GET') return sendJson(res, 200, { addresses: lanAddresses(), port: PORT, started: SERVER_STARTED });
     if (p === '/api/logout' && req.method === 'POST') {
       res.setHeader('Set-Cookie', auth.logout(req));
       return sendJson(res, 200, { ok: true });
