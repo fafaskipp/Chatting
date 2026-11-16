@@ -93,8 +93,8 @@ async function rootApi(path, opts = {}) {
 }
 
 // ---------- ログイン中のアカウントと、このユニットでしてよいこと ----------
-// 直せるか：ユニットのアカウントは全部。看護師・ケアマネジャーは自分が書いたものだけ
-const canEdit = (x) => state.perms.owner || (state.perms.staff && state.me && x.createdBy === state.me.id);
+// 直せるか：自分のユニットでは全部。看護師・ケアマネジャー・ほかのユニットは、自分が書いたものだけ
+const canEdit = (x) => state.perms.owner || ((state.perms.staff || state.perms.addOnly) && state.me && x.createdBy === state.me.id);
 // 見られる画面
 function allowedViews() {
   if (state.perms.owner) return ['date', 'patient', 'cal', 'report', 'summary', 'manage', 'trash'];

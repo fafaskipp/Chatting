@@ -314,7 +314,7 @@
   'home.own': 'Unit sendiri',
   'home.viewOnly': 'Hanya lihat',
   'home.who': 'Masuk sebagai: {name}',
-  'auth.addOnly': '👀 Melihat {unit}. Di sini Anda hanya bisa menambah catatan (penulis otomatis: "{me}")',
+  'auth.addOnly': '👀 Melihat {unit}. Di sini Anda bisa menambah catatan dan mengubah catatan yang Anda tulis sendiri (penulis otomatis: "{me}")',
   'inbox.title': '🔔 Catatan baru dari pihak lain ({n})',
   'inbox.lead': 'Catatan yang ditulis perawat, care manager, atau unit lain di unit ini.',
   'inbox.ack': '✅ Sudah dicek',

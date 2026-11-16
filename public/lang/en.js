@@ -313,7 +313,7 @@
   'home.own': 'My unit',
   'home.viewOnly': 'View only',
   'home.who': 'Logged in as: {name}',
-  'auth.addOnly': '👀 Viewing {unit}. Here you can only add notes (the writer is set to "{me}")',
+  'auth.addOnly': '👀 Viewing {unit}. Here you can add notes and edit the notes you wrote yourself (the writer is set to "{me}")',
   'inbox.title': '🔔 New notes from others ({n})',
   'inbox.lead': 'Notes written in this unit by the nurse, the care manager or another unit.',
   'inbox.ack': '✅ Checked',

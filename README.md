@@ -19,7 +19,7 @@ Hak akses (diperiksa di **server**, bukan hanya disembunyikan di layar):
 
 | | Unit sendiri | Unit lain |
 |---|---|---|
-| Akun unit | semua: tulis, edit, hapus, pasien, agenda, pengaturan, tempat sampah | melihat tab 📅 日付・👤 利用者・🗓 予定 dan **hanya menambah catatan** (untuk shift malam). Nama penulis otomatis nama unitnya (mis. かきの木); tidak bisa mengedit/menghapus |
+| Akun unit | semua: tulis, edit, hapus, pasien, agenda, pengaturan, tempat sampah | melihat tab 📅 日付・👤 利用者・🗓 予定 dan **hanya menambah catatan** (untuk shift malam). Nama penulis otomatis nama unitnya (mis. かきの木); **bisa mengedit catatan yang ditulisnya sendiri**, tidak bisa menghapus |
 | Nurse / Care manager | — | melihat semua unit (termasuk 評価・まとめ), **menulis** catatan & agenda, **mengedit hanya tulisannya sendiri**, **tidak bisa menghapus apa pun** |
 
 - Menghapus (catatan, agenda, pasien, tempat sampah), data pasien, dan pengaturan unit hanya milik **akun unit itu** — unit adalah pihak terkuat atas catatannya. Catatan yang ditulis nurse/care manager diberi tanda 🩺/📋 dan bisa dihapus oleh unit.
