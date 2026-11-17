@@ -217,18 +217,29 @@ def make_handler(service):
 
 
 def main():
+    # Windows では、出力先（Node へのパイプ）が cp932/cp1252 になり、日本語のエラー文で止まることがある。
+    # いつも UTF-8 で出し、書けない文字は \\u.... にする
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (AttributeError, ValueError):
+            pass
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "model"))
     ap.add_argument("--port", type=int, default=5005)
     ap.add_argument("--fake", action="store_true")
     ap.add_argument("--test", help="1文を翻訳して表示して終了")
+    ap.add_argument("--selftest", action="store_true", help="決まった日本語の文を翻訳して、動くか確かめる（setup-translator.bat 用）")
     a = ap.parse_args()
+    if a.selftest:
+        a.test = "今日は食欲がありました。薬も飲めました。"
 
     backend = FakeBackend() if a.fake else Ct2Backend(a.model)
     service = Service(backend)
     if a.test:
         for t in ("id", "en"):
-            print(t, "→", service.translate_text(a.test, t))
+            print(t, "->", service.translate_text(a.test, t))
         return
     srv = ThreadingHTTPServer(("127.0.0.1", a.port), make_handler(service))
     print("translator ready on 127.0.0.1:%d (%s)" % (a.port, backend.name), flush=True)
