@@ -1,2 +1,5 @@
-ctranslate2
+# 翻訳に必要なものだけ。pip は --no-deps で入れる（ctranslate2 が求める pyyaml はモデル変換用で、翻訳には使わない。
+# Python 3.15 などでは pyyaml の配布がまだなく、入れようとすると失敗するため）
+numpy
 sentencepiece
+ctranslate2
