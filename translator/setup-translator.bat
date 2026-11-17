@@ -55,10 +55,10 @@ if not exist "venv\Scripts\python.exe" (
 rem ---------- 3. Komponen: ctranslate2, sentencepiece ----------
 echo  [2/3] Memasang komponen - beberapa menit...
 if exist "wheels\" (
-  "venv\Scripts\python.exe" -m pip install --no-index --find-links wheels -r requirements.txt
+  "venv\Scripts\python.exe" -m pip install --no-deps --no-index --find-links wheels -r requirements.txt
 ) else (
   "venv\Scripts\python.exe" -m pip install --upgrade pip
-  "venv\Scripts\python.exe" -m pip install --only-binary=:all: -r requirements.txt
+  "venv\Scripts\python.exe" -m pip install --no-deps --only-binary=:all: -r requirements.txt
 )
 if errorlevel 1 (
   echo.

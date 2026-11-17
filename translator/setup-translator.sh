@@ -16,10 +16,10 @@ fi
 
 echo "[2/3] Memasang komponen..."
 if [ -d wheels ]; then
-  venv/bin/python -m pip install --no-index --find-links wheels -r requirements.txt || exit 1
+  venv/bin/python -m pip install --no-deps --no-index --find-links wheels -r requirements.txt || exit 1
 else
   venv/bin/python -m pip install --upgrade pip >/dev/null 2>&1
-  venv/bin/python -m pip install -r requirements.txt || exit 1
+  venv/bin/python -m pip install --no-deps --only-binary=:all: -r requirements.txt || exit 1
 fi
 
 echo "[3/3] Mengunduh model terjemahan (sekitar 600 MB)..."

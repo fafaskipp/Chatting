@@ -31,7 +31,7 @@ echo  Versi Python di PC ini - PC kantor harus memakai versi yang SAMA:
 echo.
 
 echo  [1/2] Mengunduh komponen Python ke folder wheels...
-%PY% -m pip download --only-binary=:all: -r requirements.txt -d wheels
+%PY% -m pip download --no-deps --only-binary=:all: -r requirements.txt -d wheels
 if errorlevel 1 (
   echo  [!] Gagal. Foto layar ini dan kirimkan.
   pause
